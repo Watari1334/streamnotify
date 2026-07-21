@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: streamnotify-postgres
+    environment:
+      POSTGRES_DB: streamnotify
+      POSTGRES_USER: streamnotify
+      POSTGRES_PASSWORD: streamnotify
+    ports:
+      - "5432:5432"
+    volumes:
+      - streamnotify-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  streamnotify-postgres-data: {}

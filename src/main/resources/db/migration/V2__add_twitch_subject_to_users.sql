@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN twitch_subject VARCHAR(255) UNIQUE;
