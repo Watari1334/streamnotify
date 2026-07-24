@@ -36,7 +36,7 @@
             display:flex; justify-content:space-between; align-items:center;
             background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:14px 16px;
         }
-        .channel-card .name{font-weight:600;}
+        .channel-card .name{font-weight:600; display:flex; align-items:center; gap:8px;}
         .channel-card .meta{font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--text-muted);}
         .channel-card button{
             background:none; border:1px solid var(--border); color:var(--live);
@@ -44,6 +44,11 @@
         }
         .channel-card button:hover{border-color:var(--live);}
         .empty{color:var(--text-muted); font-size:0.9rem; padding:16px 0;}
+
+        .live-badge{
+            display:inline-block; width:8px; height:8px; border-radius:50%;
+            background:var(--live); box-shadow:0 0 0 3px rgba(255,90,95,0.2);
+        }
 
         form{display:flex; flex-direction:column; gap:12px;}
         .row{display:flex; gap:12px;}
@@ -62,6 +67,19 @@
         .status-msg.ok{color:var(--signal);}
         .status-msg.err{color:var(--live);}
 
+        .search-results{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
+        .search-result-card{
+            display:flex; justify-content:space-between; align-items:center;
+            background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:12px 16px;
+        }
+        .search-result-card .name{font-weight:600; display:flex; align-items:center; gap:8px;}
+        .search-result-card .id{font-family:'IBM Plex Mono',monospace; font-size:0.76rem; color:var(--text-muted);}
+        .search-result-card button{
+            background:var(--signal); color:#08110F; border:none;
+            border-radius:8px; padding:8px 14px; cursor:pointer; font-size:0.82rem; font-weight:600;
+        }
+        .searching{color:var(--text-muted); font-size:0.88rem; font-family:'IBM Plex Mono',monospace;}
+
         @media(max-width:520px){ .row{flex-direction:column;} }
     </style>
 </head>
@@ -78,20 +96,16 @@
 
         <div class="channel-list" id="channel-list"></div>
 
-        <form id="add-channel-form">
-            <div class="row">
-                <div>
-                    <label for="platformChannelId">TwitchユーザーID</label>
-                    <input type="text" id="platformChannelId" required placeholder="例: 1264206199">
-                </div>
-                <div>
-                    <label for="channelName">表示名</label>
-                    <input type="text" id="channelName" required placeholder="例: げまげま">
-                </div>
+        <form id="search-form">
+            <div>
+                <label for="searchQuery">配信者名で検索</label>
+                <input type="text" id="searchQuery" required placeholder="例: げまげま">
             </div>
-            <button type="submit">チャンネルを登録</button>
-            <div class="status-msg" id="channel-status"></div>
+            <button type="submit">検索</button>
         </form>
+
+        <div class="search-results" id="search-results"></div>
+        <div class="status-msg" id="channel-status"></div>
     </section>
 
     <section class="panel">
@@ -128,7 +142,7 @@
         const list = document.getElementById('channel-list');
         list.innerHTML = '';
         if (streamers.length === 0) {
-            list.innerHTML = '<div class="empty">まだチャンネルが登録されていません。下のフォームから追加してください。</div>';
+            list.innerHTML = '<div class="empty">まだチャンネルが登録されていません。下の検索から追加してください。</div>';
             return;
         }
         streamers.forEach(s => {
@@ -154,12 +168,42 @@
         loadChannels();
     }
 
-    document.getElementById('add-channel-form').addEventListener('submit', async (e) => {
+    document.getElementById('search-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const query = document.getElementById('searchQuery').value.trim();
+        const resultsEl = document.getElementById('search-results');
         const statusEl = document.getElementById('channel-status');
         statusEl.textContent = '';
-        const platformChannelId = document.getElementById('platformChannelId').value.trim();
-        const channelName = document.getElementById('channelName').value.trim();
+        resultsEl.innerHTML = '<div class="searching">検索中...</div>';
+
+        const res = await fetch(`/streamers/search?query=${encodeURIComponent(query)}`);
+        const results = await res.json();
+
+        resultsEl.innerHTML = '';
+        if (results.length === 0) {
+            resultsEl.innerHTML = '<div class="searching">見つかりませんでした</div>';
+            return;
+        }
+
+        results.forEach(r => {
+            const card = document.createElement('div');
+            card.className = 'search-result-card';
+            card.innerHTML = `
+      <div class="name">
+        ${r.is_live ? '<span class="live-badge"></span>' : ''}
+        ${r.display_name}
+        <span class="id">(${r.id})</span>
+      </div>
+      <button>登録する</button>
+    `;
+            card.querySelector('button').addEventListener('click', () => registerChannel(r.id, r.display_name));
+            resultsEl.appendChild(card);
+        });
+    });
+
+    async function registerChannel(platformChannelId, channelName) {
+        const statusEl = document.getElementById('channel-status');
+        statusEl.textContent = '';
 
         const res = await fetch('/streamers/register', {
             method: 'POST',
@@ -170,13 +214,14 @@
         if (res.ok) {
             statusEl.textContent = '登録しました';
             statusEl.className = 'status-msg ok';
-            e.target.reset();
+            document.getElementById('search-results').innerHTML = '';
+            document.getElementById('search-form').reset();
             loadChannels();
         } else {
             statusEl.textContent = '登録に失敗しました';
             statusEl.className = 'status-msg err';
         }
-    });
+    }
 
     document.getElementById('webhook-form').addEventListener('submit', async (e) => {
         e.preventDefault();

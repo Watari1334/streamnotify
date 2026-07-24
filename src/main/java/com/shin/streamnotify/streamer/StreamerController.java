@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import com.shin.streamnotify.twitch.TwitchEventSubService.ChannelSearchResult;
 
 import java.util.List;
 import java.util.Optional;
@@ -69,6 +70,11 @@ public class StreamerController {
                         registration.getCreatedAt()
                 ))
                 .toList();
+    }
+
+    @GetMapping("/streamers/search")
+    public List<ChannelSearchResult> searchStreamers(@RequestParam String query) {
+        return twitchEventSubService.searchChannels(query);
     }
 
     @Transactional

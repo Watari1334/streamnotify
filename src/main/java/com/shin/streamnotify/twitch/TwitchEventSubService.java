@@ -80,4 +80,27 @@ public class TwitchEventSubService {
 
     private record SubscriptionData(String id) {
     }
+
+    public List<ChannelSearchResult> searchChannels(String query) {
+        String appAccessToken = twitchAuthService.getAppAccessToken();
+
+        SearchResponse response = restClient.get()
+                .uri("https://api.twitch.tv/helix/search/channels?query=" + query)
+                .header("Authorization", "Bearer " + appAccessToken)
+                .header("Client-Id", clientId)
+                .retrieve()
+                .body(SearchResponse.class);
+
+        return response.data();
+    }
+
+    private record SearchResponse(List<ChannelSearchResult> data) {
+    }
+
+    public record ChannelSearchResult(
+            String id,
+            String display_name,
+            boolean is_live
+    ) {
+    }
 }
