@@ -8,6 +8,7 @@ import com.shin.streamnotify.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +23,7 @@ public class StreamerController {
     private final RegistrationRepository registrationRepository;
     private final TwitchEventSubService twitchEventSubService;
 
+    @Transactional
     @PostMapping("/streamers/register")
     public String registerStreamer(
             @AuthenticationPrincipal OidcUser oidcUser,
@@ -43,14 +45,12 @@ public class StreamerController {
         registrationRepository.save(registration);
 
         if (isNewStreamer && "twitch".equals(request.platform())) {
-            twitchEventSubService.subscribeToStreamOnline(request.platformChannelId());
+            String subscriptionId = twitchEventSubService.subscribeToStreamOnline(request.platformChannelId());
+            streamer.setTwitchSubscriptionId(subscriptionId);
+            streamerRepository.save(streamer);
         }
 
         return "登録しました: " + streamer.getChannelName();
-    }
-    @GetMapping("/debug/eventsub-subscriptions")
-    public String debugListSubscriptions() {
-        return twitchEventSubService.listSubscriptions();
     }
 
     @GetMapping("/streamers")
@@ -71,6 +71,7 @@ public class StreamerController {
                 .toList();
     }
 
+    @Transactional
     @DeleteMapping("/streamers/{streamerId}")
     public String deleteStreamer(
             @AuthenticationPrincipal OidcUser oidcUser,
@@ -84,6 +85,17 @@ public class StreamerController {
                 .orElseThrow(() -> new IllegalStateException("登録が見つかりません"));
 
         registrationRepository.delete(registration);
+
+        List<Registration> remainingRegistrations =
+                registrationRepository.findByStreamer_StreamerId(streamerId);
+
+        if (remainingRegistrations.isEmpty()) {
+            Streamer streamer = registration.getStreamer();
+            if (streamer.getTwitchSubscriptionId() != null) {
+                twitchEventSubService.unsubscribe(streamer.getTwitchSubscriptionId());
+            }
+            streamerRepository.delete(streamer);
+        }
 
         return "削除しました";
     }

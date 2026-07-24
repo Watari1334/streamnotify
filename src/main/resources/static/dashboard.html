@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ダッシュボード — StreamNotify</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --bg:#12141A; --surface:#1B1E27; --border:#2A2E3A;
+            --text:#ECEDF1; --text-muted:#8B90A0;
+            --live:#FF5A5F; --signal:#4DE8C6; --amber:#FFB84D;
+        }
+        *{box-sizing:border-box; margin:0; padding:0;}
+        body{background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh;}
+        a{color:var(--signal);}
+        :focus-visible{outline:2px solid var(--signal); outline-offset:2px;}
+
+        .topbar{
+            display:flex; justify-content:space-between; align-items:center;
+            padding:22px 6vw; border-bottom:1px solid var(--border);
+        }
+        .logo{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.05rem;}
+        .logo span{color:var(--signal);}
+        .user{font-family:'IBM Plex Mono',monospace; font-size:0.85rem; color:var(--text-muted);}
+
+        main{max-width:760px; margin:0 auto; padding:6vh 6vw; display:flex; flex-direction:column; gap:40px;}
+
+        .panel{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px;}
+        .panel h2{font-family:'Space Grotesk',sans-serif; font-size:1.1rem; margin-bottom:6px;}
+        .panel .sub{color:var(--text-muted); font-size:0.88rem; margin-bottom:22px;}
+
+        .channel-list{display:flex; flex-direction:column; gap:10px; margin-bottom:22px;}
+        .channel-card{
+            display:flex; justify-content:space-between; align-items:center;
+            background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:14px 16px;
+        }
+        .channel-card .name{font-weight:600;}
+        .channel-card .meta{font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--text-muted);}
+        .channel-card button{
+            background:none; border:1px solid var(--border); color:var(--live);
+            border-radius:8px; padding:6px 12px; cursor:pointer; font-size:0.82rem;
+        }
+        .channel-card button:hover{border-color:var(--live);}
+        .empty{color:var(--text-muted); font-size:0.9rem; padding:16px 0;}
+
+        form{display:flex; flex-direction:column; gap:12px;}
+        .row{display:flex; gap:12px;}
+        .row > div{flex:1; display:flex; flex-direction:column; gap:6px;}
+        label{font-size:0.82rem; color:var(--text-muted);}
+        input{
+            background:var(--bg); border:1px solid var(--border); border-radius:8px;
+            padding:10px 12px; color:var(--text); font-family:'Inter',sans-serif; font-size:0.92rem;
+        }
+        input:focus{border-color:var(--signal);}
+        button[type=submit]{
+            align-self:flex-start; background:var(--signal); color:#08110F; border:none;
+            font-weight:600; padding:11px 22px; border-radius:8px; cursor:pointer; font-size:0.9rem;
+        }
+        .status-msg{font-size:0.85rem; font-family:'IBM Plex Mono',monospace; min-height:18px;}
+        .status-msg.ok{color:var(--signal);}
+        .status-msg.err{color:var(--live);}
+
+        @media(max-width:520px){ .row{flex-direction:column;} }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="logo">Stream<span>Notify</span></div>
+    <div class="user" id="username">読み込み中...</div>
+</header>
+
+<main>
+    <section class="panel">
+        <h2>監視中のチャンネル</h2>
+        <div class="sub">登録したチャンネルが配信を開始すると、Discordに通知されます。</div>
+
+        <div class="channel-list" id="channel-list"></div>
+
+        <form id="add-channel-form">
+            <div class="row">
+                <div>
+                    <label for="platformChannelId">TwitchユーザーID</label>
+                    <input type="text" id="platformChannelId" required placeholder="例: 1264206199">
+                </div>
+                <div>
+                    <label for="channelName">表示名</label>
+                    <input type="text" id="channelName" required placeholder="例: げまげま">
+                </div>
+            </div>
+            <button type="submit">チャンネルを登録</button>
+            <div class="status-msg" id="channel-status"></div>
+        </form>
+    </section>
+
+    <section class="panel">
+        <h2>Discord通知先</h2>
+        <div class="sub">配信開始通知を送るDiscordのWebhook URLを登録します。</div>
+        <form id="webhook-form">
+            <div>
+                <label for="discordWebhookUrl">Discord Webhook URL</label>
+                <input type="url" id="discordWebhookUrl" required placeholder="https://discord.com/api/webhooks/...">
+            </div>
+            <button type="submit">保存する</button>
+            <div class="status-msg" id="webhook-status"></div>
+        </form>
+    </section>
+</main>
+
+<script>
+    let csrf = null;
+
+    async function getCsrf() {
+        const res = await fetch('/api/csrf-token');
+        csrf = await res.json();
+    }
+
+    async function loadMe() {
+        const res = await fetch('/api/me');
+        const me = await res.json();
+        document.getElementById('username').textContent = me.displayName + ' としてログイン中';
+    }
+
+    async function loadChannels() {
+        const res = await fetch('/streamers');
+        const streamers = await res.json();
+        const list = document.getElementById('channel-list');
+        list.innerHTML = '';
+        if (streamers.length === 0) {
+            list.innerHTML = '<div class="empty">まだチャンネルが登録されていません。下のフォームから追加してください。</div>';
+            return;
+        }
+        streamers.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'channel-card';
+            card.innerHTML = `
+      <div>
+        <div class="name">${s.channelName}</div>
+        <div class="meta">${s.platform} / ${s.platformChannelId}</div>
+      </div>
+      <button data-id="${s.streamerId}">監視をやめる</button>
+    `;
+            card.querySelector('button').addEventListener('click', () => deleteChannel(s.streamerId));
+            list.appendChild(card);
+        });
+    }
+
+    async function deleteChannel(id) {
+        await fetch(`/streamers/${id}`, {
+            method: 'DELETE',
+            headers: { [csrf.headerName]: csrf.token }
+        });
+        loadChannels();
+    }
+
+    document.getElementById('add-channel-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const statusEl = document.getElementById('channel-status');
+        statusEl.textContent = '';
+        const platformChannelId = document.getElementById('platformChannelId').value.trim();
+        const channelName = document.getElementById('channelName').value.trim();
+
+        const res = await fetch('/streamers/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
+            body: JSON.stringify({ platform: 'twitch', platformChannelId, channelName })
+        });
+
+        if (res.ok) {
+            statusEl.textContent = '登録しました';
+            statusEl.className = 'status-msg ok';
+            e.target.reset();
+            loadChannels();
+        } else {
+            statusEl.textContent = '登録に失敗しました';
+            statusEl.className = 'status-msg err';
+        }
+    });
+
+    document.getElementById('webhook-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const statusEl = document.getElementById('webhook-status');
+        statusEl.textContent = '';
+        const discordWebhookUrl = document.getElementById('discordWebhookUrl').value.trim();
+
+        const res = await fetch('/notifications/destinations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
+            body: JSON.stringify({ discordWebhookUrl })
+        });
+
+        if (res.ok) {
+            statusEl.textContent = '保存しました';
+            statusEl.className = 'status-msg ok';
+            e.target.reset();
+        } else {
+            statusEl.textContent = '保存に失敗しました';
+            statusEl.className = 'status-msg err';
+        }
+    });
+
+    (async () => {
+        await getCsrf();
+        await loadMe();
+        await loadChannels();
+    })();
+</script>
+</body>
+</html>

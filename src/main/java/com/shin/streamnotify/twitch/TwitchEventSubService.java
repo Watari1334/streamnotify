@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -24,7 +25,7 @@ public class TwitchEventSubService {
     @Value("${twitch.eventsub.callback-url}")
     private String callbackUrl;
 
-    public void subscribeToStreamOnline(String broadcasterUserId) {
+    public String subscribeToStreamOnline(String broadcasterUserId) {
         String appAccessToken = twitchAuthService.getAppAccessToken();
 
         Map<String, Object> requestBody = Map.of(
@@ -38,17 +39,31 @@ public class TwitchEventSubService {
                 )
         );
 
-        String response = restClient.post()
+        SubscriptionResponse response = restClient.post()
                 .uri("https://api.twitch.tv/helix/eventsub/subscriptions")
                 .header("Authorization", "Bearer " + appAccessToken)
                 .header("Client-Id", clientId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(requestBody)
                 .retrieve()
-                .body(String.class);
+                .body(SubscriptionResponse.class);
 
         System.out.println("EventSub購読登録結果: " + response);
+
+        return response.data().get(0).id();
     }
+
+    public void unsubscribe(String subscriptionId) {
+        String appAccessToken = twitchAuthService.getAppAccessToken();
+
+        restClient.delete()
+                .uri("https://api.twitch.tv/helix/eventsub/subscriptions?id=" + subscriptionId)
+                .header("Authorization", "Bearer " + appAccessToken)
+                .header("Client-Id", clientId)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     public String listSubscriptions() {
         String appAccessToken = twitchAuthService.getAppAccessToken();
 
@@ -58,5 +73,11 @@ public class TwitchEventSubService {
                 .header("Client-Id", clientId)
                 .retrieve()
                 .body(String.class);
+    }
+
+    private record SubscriptionResponse(List<SubscriptionData> data) {
+    }
+
+    private record SubscriptionData(String id) {
     }
 }

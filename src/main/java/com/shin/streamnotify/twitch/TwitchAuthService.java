@@ -12,7 +12,7 @@ import org.springframework.web.client.RestClient;
 
 @Service
 @RequiredArgsConstructor
-public class TwitchAuthService {
+public class TwitchAuthService{
 
     private final RestClient restClient = RestClient.create();
 

@@ -1,0 +1,1 @@
+ALTER TABLE streamers ADD COLUMN twitch_subscription_id VARCHAR(255);

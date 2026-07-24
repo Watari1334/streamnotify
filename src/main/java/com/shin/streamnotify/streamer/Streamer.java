@@ -28,6 +28,9 @@ public class Streamer {
     @Column(name = "channel_name", nullable = false)
     private String channelName;
 
+    @Column(name = "twitch_subscription_id")
+    private String twitchSubscriptionId;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
