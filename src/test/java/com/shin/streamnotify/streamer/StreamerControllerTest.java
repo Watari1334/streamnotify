@@ -10,8 +10,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import com.shin.streamnotify.registration.Registration;
 
 import java.util.Optional;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -97,5 +99,37 @@ class StreamerControllerTest {
                 .hasMessage("ユーザーが見つかりません");
 
         verify(streamerRepository, never()).findByPlatformAndPlatformChannelId(anyString(), anyString());
+    }
+
+    @Test
+    void 最後の登録者が削除するとTwitch購読解除とStreamer削除が行われる() {
+        // Arrange
+        Long streamerId = 1L;
+        Long userId = 100L;
+
+        Streamer streamer = new Streamer("twitch", "12345", "テストチャンネル");
+        streamer.setTwitchSubscriptionId("sub-id-999");
+
+        Registration registration = new Registration(currentUser, streamer);
+
+        when(oidcUser.getSubject()).thenReturn("twitch-subject-123");
+        when(userRepository.findByTwitchSubject("twitch-subject-123"))
+                .thenReturn(Optional.of(currentUser));
+        when(currentUser.getUserId()).thenReturn(userId);
+
+        when(registrationRepository.findByUser_UserIdAndStreamer_StreamerId(userId, streamerId))
+                .thenReturn(Optional.of(registration));
+
+        when(registrationRepository.findByStreamer_StreamerId(streamerId))
+                .thenReturn(List.of());
+
+        // Act
+        String result = streamerController.deleteStreamer(oidcUser, streamerId);
+
+        // Assert
+        verify(registrationRepository).delete(registration);
+        verify(twitchEventSubService).unsubscribe("sub-id-999");
+        verify(streamerRepository).delete(streamer);
+        assertThat(result).isEqualTo("削除しました");
     }
 }
