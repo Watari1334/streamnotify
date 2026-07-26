@@ -34,6 +34,9 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
 
+      - name: Grant execute permission for mvnw
+        run: chmod +x mvnw
+
       - name: Run tests
         env:
           TWITCH_CLIENT_ID: dummy
