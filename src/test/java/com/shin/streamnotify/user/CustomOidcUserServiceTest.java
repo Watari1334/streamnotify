@@ -1,0 +1,58 @@
+package com.shin.streamnotify.user;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+
+import java.util.Optional;
+
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class CustomOidcUserServiceTest {
+
+    @Mock private UserRepository userRepository;
+    @Mock private OidcUser oidcUser;
+
+    @InjectMocks
+    private CustomOidcUserService customOidcUserService;
+
+    @Test
+    void 初回ログインで新しいUserが作られる() {
+        // Arrange
+        when(oidcUser.getSubject()).thenReturn("twitch-subject-123");
+        when(oidcUser.getPreferredUsername()).thenReturn("わたり");
+
+        when(userRepository.findByTwitchSubject("twitch-subject-123"))
+                .thenReturn(Optional.empty());
+
+        // Act
+        customOidcUserService.provisionUser(oidcUser);
+
+        // Assert
+        verify(userRepository).save(argThat(user ->
+                user.getUserName().equals("わたり")
+                        && user.getTwitchSubject().equals("twitch-subject-123")
+        ));
+    }
+
+    @Test
+    void 既存ユーザーがログインしても新しいUserは作られない() {
+        // Arrange
+        User existingUser = new User("わたり", "twitch-subject-123");
+
+        when(oidcUser.getSubject()).thenReturn("twitch-subject-123");
+
+        when(userRepository.findByTwitchSubject("twitch-subject-123"))
+                .thenReturn(Optional.of(existingUser));
+
+        // Act
+        customOidcUserService.provisionUser(oidcUser);
+
+        // Assert
+        verify(userRepository, never()).save(any(User.class));
+    }
+}

@@ -15,7 +15,11 @@ public class CustomOidcUserService extends OidcUserService {
     @Override
     public OidcUser loadUser(OidcUserRequest userRequest) {
         OidcUser oidcUser = super.loadUser(userRequest);
+        provisionUser(oidcUser);
+        return oidcUser;
+    }
 
+    void provisionUser(OidcUser oidcUser) {
         String twitchSubject = oidcUser.getSubject();
 
         userRepository.findByTwitchSubject(twitchSubject)
@@ -26,8 +30,6 @@ public class CustomOidcUserService extends OidcUserService {
                     );
                     return userRepository.save(newUser);
                 });
-
-        return oidcUser;
     }
 
     private String resolveUserName(OidcUser oidcUser, String twitchSubject) {
