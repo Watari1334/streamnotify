@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.util.List;
 import java.util.Map;
@@ -81,6 +82,7 @@ public class TwitchEventSubService {
     private record SubscriptionData(String id) {
     }
 
+    @Cacheable(value = "channelSearch", key = "#query")
     public List<ChannelSearchResult> searchChannels(String query) {
         String appAccessToken = twitchAuthService.getAppAccessToken();
 
