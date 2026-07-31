@@ -24,7 +24,11 @@ public class CacheConfig {
                 )
                 .serializeValuesWith(
                         RedisSerializationContext.SerializationPair
-                                .fromSerializer(GenericJacksonJsonRedisSerializer.builder().build())
+                                .fromSerializer(
+                                        GenericJacksonJsonRedisSerializer.builder()
+                                                .enableUnsafeDefaultTyping()
+                                                .build()
+                                )
                 );
 
         return RedisCacheManager.builder(connectionFactory)
