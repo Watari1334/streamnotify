@@ -25,7 +25,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/webhooks/**").permitAll()
-                        .requestMatchers("/", "/login.html", "/api/csrf-token").permitAll()
+                        .requestMatchers("/", "/index.html", "/api/csrf-token").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated()
                 )

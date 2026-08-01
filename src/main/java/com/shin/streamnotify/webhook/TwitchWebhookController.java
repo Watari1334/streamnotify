@@ -92,15 +92,15 @@ public class TwitchWebhookController {
 
         for (Registration registration : registrations) {
             Long userId = registration.getUser().getUserId();
-            List<NotificationDestination> destinations =
+            Optional<NotificationDestination> destinationOpt =
                     notificationDestinationRepository.findByUser_UserId(userId);
 
-            for (NotificationDestination destination : destinations) {
-                discordNotificationService.sendStreamOnlineNotification(
-                        destination.getDiscordWebhookUrl(),
-                        streamer.getChannelName()
-                );
-            }
+            destinationOpt.ifPresent(destination ->
+                    discordNotificationService.sendStreamOnlineNotification(
+                            destination.getDiscordWebhookUrl(),
+                            streamer.getChannelName()
+                    )
+            );
         }
     }
 
