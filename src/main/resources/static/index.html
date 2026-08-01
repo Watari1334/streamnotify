@@ -11,6 +11,7 @@
             --bg:#12141A; --surface:#1B1E27; --border:#2A2E3A;
             --text:#ECEDF1; --text-muted:#8B90A0;
             --live:#FF5A5F; --signal:#4DE8C6; --amber:#FFB84D;
+            --twitch:#9146FF; --youtube:#FF0000;
         }
         *{box-sizing:border-box; margin:0; padding:0;}
         body{
@@ -27,24 +28,16 @@
         }
         .logo{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.1rem; letter-spacing:-0.02em;}
         .logo span{color:var(--signal);}
-        .nav-signin{
-            font-size:0.9rem; color:var(--text-muted); text-decoration:none;
-            border:1px solid var(--border); padding:8px 16px; border-radius:999px;
-        }
-        .nav-signin:hover{color:var(--text); border-color:var(--signal);}
 
         .hero{
             max-width:720px; margin:0 auto; padding:9vh 6vw 8vh; text-align:center;
         }
-        .live-indicator{
-            display:inline-flex; align-items:center; gap:8px;
-            font-family:'IBM Plex Mono',monospace; font-size:0.75rem; letter-spacing:0.12em;
-            color:var(--live); text-transform:uppercase; margin-bottom:28px;
-        }
+
         .live-dot{
-            width:8px; height:8px; border-radius:50%; background:var(--live);
+            width:16px; height:16px; border-radius:50%; background:var(--live);
             box-shadow:0 0 0 0 rgba(255,90,95,0.5);
             animation:pulse 1.8s infinite;
+            flex-shrink:0;
         }
         @keyframes pulse{
             0%{box-shadow:0 0 0 0 rgba(255,90,95,0.5);}
@@ -55,14 +48,30 @@
             font-family:'Space Grotesk',sans-serif; font-weight:700;
             font-size:clamp(2.1rem,5vw,3.2rem); line-height:1.15; letter-spacing:-0.02em;
             margin-bottom:22px;
+            display:flex; align-items:center; justify-content:center; gap:16px;
         }
-        .lede{color:var(--text-muted); font-size:1.05rem; max-width:520px; margin:0 auto 36px;}
-        .cta{
-            display:inline-block; background:var(--signal); color:#08110F;
-            font-weight:600; padding:14px 30px; border-radius:10px; text-decoration:none;
-            font-size:0.98rem; transition:transform .15s ease;
+        .lede{color:var(--text-muted); font-size:1.05rem; max-width:640px; margin:0 auto 36px;}
+
+        .cta-group{
+            display:flex; justify-content:center; gap:14px; flex-wrap:wrap;
         }
-        .cta:hover{transform:translateY(-1px);}
+        .cta-btn{
+            display:inline-flex; align-items:center; justify-content:center; gap:8px;
+            font-weight:600; padding:14px 28px; border-radius:10px; text-decoration:none;
+            font-size:0.95rem; transition:transform .15s ease;
+        }
+        .cta-btn:hover{transform:translateY(-1px);}
+        .cta-btn.twitch{background:var(--twitch); color:#fff;}
+        .cta-btn.youtube{
+            background:var(--surface); color:var(--text-muted);
+            border:1px solid var(--border); cursor:not-allowed;
+        }
+        .cta-btn.youtube:hover{transform:none;}
+        .badge-soon{
+            font-family:'IBM Plex Mono',monospace; font-size:0.65rem;
+            background:var(--border); color:var(--text-muted);
+            padding:2px 8px; border-radius:999px; margin-left:2px;
+        }
 
         .signal-meter{
             display:flex; justify-content:center; align-items:flex-end; gap:5px;
@@ -99,11 +108,6 @@
         .steps h3{font-family:'Space Grotesk',sans-serif; font-size:1.05rem; margin-bottom:10px;}
         .steps p{color:var(--text-muted); font-size:0.92rem;}
 
-        footer{
-            text-align:center; padding:32px; color:var(--text-muted); font-size:0.85rem;
-            font-family:'IBM Plex Mono',monospace;
-        }
-
         @media(max-width:640px){
             .steps{grid-template-columns:1fr;}
         }
@@ -115,18 +119,21 @@
 <body>
 <header class="topbar">
     <div class="logo">Stream<span>Notify</span></div>
-    <a class="nav-signin" href="/oauth2/authorization/twitch">サインイン</a>
 </header>
 
 <main>
-    <section class="hero">
-        <div class="live-indicator"><span class="live-dot"></span>配信開始を、その瞬間に</div>
-        <h1>推しが配信を始めた瞬間、<br>あなたはもう知っている。</h1>
+    <section class="hero" id="hero">
+        <h1><span class="live-dot"></span>配信開始を、その瞬間に。</h1>
         <p class="lede">
-            StreamNotifyがTwitchの配信状況を監視し、配信が始まった瞬間にDiscordへ通知します。
-            更新ボタンを押す必要も、見逃す心配もありません。
+            TwitchとYouTubeを見張って、Discordに通知します。
         </p>
-        <a class="cta" href="/oauth2/authorization/twitch">Twitchでログイン</a>
+
+        <div class="cta-group">
+            <a class="cta-btn twitch" href="/oauth2/authorization/twitch">Twitchでログイン</a>
+            <span class="cta-btn youtube" aria-disabled="true">
+                YouTubeでログイン<span class="badge-soon">近日公開</span>
+            </span>
+        </div>
 
         <div class="signal-meter" aria-hidden="true">
             <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
@@ -155,6 +162,5 @@
     </section>
 </main>
 
-<footer>StreamNotify — Built by Watari</footer>
 </body>
 </html>

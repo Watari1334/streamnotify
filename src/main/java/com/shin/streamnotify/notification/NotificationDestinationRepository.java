@@ -2,9 +2,9 @@ package com.shin.streamnotify.notification;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
+import java.util.Optional;
 
 public interface NotificationDestinationRepository extends JpaRepository<NotificationDestination, Long> {
 
-    List<NotificationDestination> findByUser_UserId(Long userId);
+    Optional<NotificationDestination> findByUser_UserId(Long userId);
 }
