@@ -29,7 +29,11 @@
 
         .panel{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px;}
         .panel h2{font-family:'Space Grotesk',sans-serif; font-size:1.1rem; margin-bottom:6px;}
-        .panel .sub{color:var(--text-muted); font-size:0.88rem; margin-bottom:22px;}
+        .panel .sub{color:var(--text-muted); font-size:0.88rem; margin-bottom:6px;}
+        .channel-count{
+            font-family:'IBM Plex Mono',monospace; font-size:0.82rem; color:var(--text-muted);
+            margin-bottom:22px;
+        }
 
         .channel-list{display:flex; flex-direction:column; gap:10px; margin-bottom:22px;}
         .channel-card{
@@ -93,6 +97,7 @@
     <section class="panel">
         <h2>監視中のチャンネル</h2>
         <div class="sub">登録したチャンネルが配信を開始すると、Discordに通知されます。</div>
+        <div class="channel-count" id="channel-count"></div>
 
         <div class="channel-list" id="channel-list"></div>
 
@@ -139,6 +144,7 @@
     async function loadChannels() {
         const res = await fetch('/streamers');
         const streamers = await res.json();
+        document.getElementById('channel-count').textContent = `${streamers.length} / 20件`;
         const list = document.getElementById('channel-list');
         list.innerHTML = '';
         if (streamers.length === 0) {
