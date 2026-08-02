@@ -37,7 +37,7 @@ public class StreamerController {
 
         long currentCount = registrationRepository.countByUser_UserId(currentUser.getUserId());
         if (currentCount >= 20) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "登録できるチャンネルは、最大20件までです");
+            throw new ChannelLimitExceededException("登録できるチャンネルは、最大20件までです");
         }
 
         Optional<Streamer> existingStreamer = streamerRepository
