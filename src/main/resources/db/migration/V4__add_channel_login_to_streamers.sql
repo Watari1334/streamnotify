@@ -1,0 +1,1 @@
+ALTER TABLE streamers ADD COLUMN channel_login VARCHAR(255);

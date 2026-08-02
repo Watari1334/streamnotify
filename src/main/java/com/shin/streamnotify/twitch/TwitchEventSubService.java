@@ -101,6 +101,7 @@ public class TwitchEventSubService {
 
     public record ChannelSearchResult(
             String id,
+            String broadcaster_login,
             String display_name,
             boolean is_live
     ) {

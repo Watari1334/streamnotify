@@ -11,9 +11,11 @@ public class DiscordNotificationService {
 
     private final RestClient restClient = RestClient.create();
 
-    public void sendStreamOnlineNotification(String webhookUrl, String channelName) {
+    public void sendStreamOnlineNotification(String webhookUrl, String channelName, String channelLogin) {
+        String streamUrl = "https://www.twitch.tv/" + channelLogin;
+
         Map<String, Object> requestBody = Map.of(
-                "content", "🔴 **" + channelName + "** が配信を開始しました!"
+                "content", "🔴 **" + channelName + "** が配信を開始しました!\n" + streamUrl
         );
 
         restClient.post()

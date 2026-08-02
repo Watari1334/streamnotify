@@ -39,7 +39,7 @@ public class StreamerController {
         boolean isNewStreamer = existingStreamer.isEmpty();
 
         Streamer streamer = existingStreamer.orElseGet(() -> streamerRepository.save(
-                new Streamer(request.platform(), request.platformChannelId(), request.channelName())
+                new Streamer(request.platform(), request.platformChannelId(), request.channelName(), request.channelLogin())
         ));
 
         Registration registration = new Registration(currentUser, streamer);

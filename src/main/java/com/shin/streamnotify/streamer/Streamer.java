@@ -28,16 +28,20 @@ public class Streamer {
     @Column(name = "channel_name", nullable = false)
     private String channelName;
 
+    @Column(name = "channel_login")
+    private String channelLogin;
+
     @Column(name = "twitch_subscription_id")
     private String twitchSubscriptionId;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    public Streamer(String platform, String platformChannelId, String channelName) {
+    public Streamer(String platform, String platformChannelId, String channelName, String channelLogin) {
         this.platform = platform;
         this.platformChannelId = platformChannelId;
         this.channelName = channelName;
+        this.channelLogin = channelLogin;
         this.createdAt = LocalDateTime.now();
     }
 }

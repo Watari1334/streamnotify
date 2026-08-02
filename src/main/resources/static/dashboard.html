@@ -196,19 +196,19 @@
       </div>
       <button>登録する</button>
     `;
-            card.querySelector('button').addEventListener('click', () => registerChannel(r.id, r.display_name));
+            card.querySelector('button').addEventListener('click', () => registerChannel(r.id, r.display_name, r.broadcaster_login));
             resultsEl.appendChild(card);
         });
     });
 
-    async function registerChannel(platformChannelId, channelName) {
+    async function registerChannel(platformChannelId, channelName, channelLogin) {
         const statusEl = document.getElementById('channel-status');
         statusEl.textContent = '';
 
         const res = await fetch('/streamers/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
-            body: JSON.stringify({ platform: 'twitch', platformChannelId, channelName })
+            body: JSON.stringify({ platform: 'twitch', platformChannelId, channelName, channelLogin })
         });
 
         if (res.ok) {
