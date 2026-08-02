@@ -218,7 +218,8 @@
             document.getElementById('search-form').reset();
             loadChannels();
         } else {
-            statusEl.textContent = '登録に失敗しました';
+            const errorText = await res.text();
+            statusEl.textContent = errorText || '登録に失敗しました';
             statusEl.className = 'status-msg err';
         }
     }

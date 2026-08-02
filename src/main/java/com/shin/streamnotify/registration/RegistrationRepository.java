@@ -11,4 +11,6 @@ public interface RegistrationRepository extends JpaRepository<Registration, Regi
     List<Registration> findByStreamer_StreamerId(Long streamerId);
 
     Optional<Registration> findByUser_UserIdAndStreamer_StreamerId(Long userId, Long streamerId);
+
+    long countByUser_UserId(Long userId);
 }

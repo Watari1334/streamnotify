@@ -6,10 +6,12 @@ import com.shin.streamnotify.twitch.TwitchEventSubService;
 import com.shin.streamnotify.user.User;
 import com.shin.streamnotify.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import com.shin.streamnotify.twitch.TwitchEventSubService.ChannelSearchResult;
 
 import java.util.List;
@@ -32,6 +34,11 @@ public class StreamerController {
     ) {
         User currentUser = userRepository.findByTwitchSubject(oidcUser.getSubject())
                 .orElseThrow(() -> new IllegalStateException("ユーザーが見つかりません"));
+
+        long currentCount = registrationRepository.countByUser_UserId(currentUser.getUserId());
+        if (currentCount >= 20) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "登録できるチャンネルは、最大20件までです");
+        }
 
         Optional<Streamer> existingStreamer = streamerRepository
                 .findByPlatformAndPlatformChannelId(request.platform(), request.platformChannelId());
