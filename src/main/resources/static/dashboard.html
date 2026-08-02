@@ -218,8 +218,16 @@
             document.getElementById('search-form').reset();
             loadChannels();
         } else {
-            const errorText = await res.text();
-            statusEl.textContent = errorText || '登録に失敗しました';
+            let message = '登録に失敗しました';
+            try {
+                const errorJson = await res.json();
+                if (errorJson.message) {
+                    message = errorJson.message;
+                }
+            } catch (e) {
+                // JSONでなければ、デフォルトのメッセージのまま
+            }
+            statusEl.textContent = message;
             statusEl.className = 'status-msg err';
         }
     }
