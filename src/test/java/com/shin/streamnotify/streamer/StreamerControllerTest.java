@@ -36,7 +36,7 @@ class StreamerControllerTest {
     void 新規配信者を登録するとTwitchのサブスクリプションが作成される() {
         // Arrange
         StreamerRegistrationRequest request =
-                new StreamerRegistrationRequest("twitch", "12345", "テストチャンネル");
+                new StreamerRegistrationRequest("twitch", "12345", "テストチャンネル", "test_channel");
 
         when(oidcUser.getSubject()).thenReturn("twitch-subject-123");
         when(userRepository.findByTwitchSubject("twitch-subject-123"))
@@ -44,7 +44,7 @@ class StreamerControllerTest {
         when(streamerRepository.findByPlatformAndPlatformChannelId("twitch", "12345"))
                 .thenReturn(Optional.empty());
 
-        Streamer savedStreamer = new Streamer("twitch", "12345", "テストチャンネル");
+        Streamer savedStreamer = new Streamer("twitch", "12345", "テストチャンネル", "test_channel");
         when(streamerRepository.save(any(Streamer.class))).thenReturn(savedStreamer);
 
         when(twitchEventSubService.subscribeToStreamOnline("12345"))
@@ -63,9 +63,9 @@ class StreamerControllerTest {
     void 既存の配信者に登録すると新規作成やTwitch購読は行われない() {
         // Arrange
         StreamerRegistrationRequest request =
-                new StreamerRegistrationRequest("twitch", "12345", "テストチャンネル");
+                new StreamerRegistrationRequest("twitch", "12345", "テストチャンネル", "test_channel");
 
-        Streamer existingStreamer = new Streamer("twitch", "12345", "テストチャンネル");
+        Streamer existingStreamer = new Streamer("twitch", "12345", "テストチャンネル", "test_channel");
 
         when(oidcUser.getSubject()).thenReturn("twitch-subject-456");
         when(userRepository.findByTwitchSubject("twitch-subject-456"))
@@ -87,7 +87,7 @@ class StreamerControllerTest {
     void 存在しないユーザーで登録しようとすると例外が発生する() {
         // Arrange
         StreamerRegistrationRequest request =
-                new StreamerRegistrationRequest("twitch", "12345", "テストチャンネル");
+                new StreamerRegistrationRequest("twitch", "12345", "テストチャンネル", "test_channel");
 
         when(oidcUser.getSubject()).thenReturn("unknown-subject");
         when(userRepository.findByTwitchSubject("unknown-subject"))
@@ -107,7 +107,7 @@ class StreamerControllerTest {
         Long streamerId = 1L;
         Long userId = 100L;
 
-        Streamer streamer = new Streamer("twitch", "12345", "テストチャンネル");
+        Streamer streamer = new Streamer("twitch", "12345", "テストチャンネル", "test_channel");
         streamer.setTwitchSubscriptionId("sub-id-999");
 
         Registration registration = new Registration(currentUser, streamer);
@@ -139,7 +139,7 @@ class StreamerControllerTest {
         Long streamerId = 1L;
         Long userId = 100L;
 
-        Streamer streamer = new Streamer("twitch", "12345", "テストチャンネル");
+        Streamer streamer = new Streamer("twitch", "12345", "テストチャンネル", "test_channel");
         streamer.setTwitchSubscriptionId("sub-id-999");
 
         Registration registration = new Registration(currentUser, streamer);

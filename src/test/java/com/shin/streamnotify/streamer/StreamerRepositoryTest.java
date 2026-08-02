@@ -18,7 +18,7 @@ class StreamerRepositoryTest {
 
     @Test
     void 配信者を保存して検索できる() {
-        Streamer streamer = new Streamer("twitch", "1264206199", "自分のチャンネル");
+        Streamer streamer = new Streamer("twitch", "1264206199", "自分のチャンネル", "my_channel");
         streamerRepository.save(streamer);
 
         Optional<Streamer> found = streamerRepository
