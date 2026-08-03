@@ -1,6 +1,7 @@
 package com.shin.streamnotify.config;
 
 import com.shin.streamnotify.twitch.TwitchEventSubService.ChannelSearchResult;
+import com.shin.streamnotify.youtube.YouTubeService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -10,7 +11,6 @@ import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import tools.jackson.databind.JavaType;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.type.TypeFactory;
 
 import java.time.Duration;
@@ -38,10 +38,24 @@ public class CacheConfig {
                 )
         );
 
+        JavaType youtubeChannelSearchListType = TypeFactory.createDefaultInstance()
+                .constructCollectionType(List.class, YouTubeService.ChannelSearchResult.class);
+
+        RedisCacheConfiguration youtubeChannelSearchConfig = defaultConfig
+                .entryTtl(Duration.ofHours(24))
+                .serializeValuesWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(
+                                new JacksonJsonRedisSerializer<>(youtubeChannelSearchListType)
+                        )
+                );
+
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(
-                        Map.of("channelSearch", channelSearchConfig)
+                        Map.of(
+                                "twitchchannelSearch", channelSearchConfig,
+                                "youtubeChannelSearch", youtubeChannelSearchConfig
+                        )
                 )
                 .build();
     }

@@ -5,13 +5,12 @@ import com.shin.streamnotify.registration.RegistrationRepository;
 import com.shin.streamnotify.twitch.TwitchEventSubService;
 import com.shin.streamnotify.user.CurrentUserResolver;
 import com.shin.streamnotify.user.User;
+import com.shin.streamnotify.youtube.YouTubeService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import com.shin.streamnotify.twitch.TwitchEventSubService.ChannelSearchResult;
 
 import java.util.List;
@@ -25,6 +24,7 @@ public class StreamerController {
     private final CurrentUserResolver currentUserResolver;
     private final RegistrationRepository registrationRepository;
     private final TwitchEventSubService twitchEventSubService;
+    private final YouTubeService youTubeService;
 
     @Transactional
     @PostMapping("/streamers/register")
@@ -77,9 +77,14 @@ public class StreamerController {
                 .toList();
     }
 
-    @GetMapping("/streamers/search")
+    @GetMapping("/streamers/search/twitch")
     public List<ChannelSearchResult> searchStreamers(@RequestParam String query) {
         return twitchEventSubService.searchChannels(query);
+    }
+
+    @GetMapping("/streamers/search/youtube")
+    public List<YouTubeService.ChannelSearchResult> searchYouTubeStreamers(@RequestParam String query) {
+        return youTubeService.searchChannels(query);
     }
 
     @Transactional

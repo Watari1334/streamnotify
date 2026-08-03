@@ -49,12 +49,7 @@
         .channel-card button:hover{border-color:var(--live);}
         .empty{color:var(--text-muted); font-size:0.9rem; padding:16px 0;}
 
-        .live-badge{
-            display:inline-block; width:8px; height:8px; border-radius:50%;
-            background:var(--live); box-shadow:0 0 0 3px rgba(255,90,95,0.2);
-        }
-
-        form{display:flex; flex-direction:column; gap:12px;}
+        form{display:flex; flex-direction:column; gap:12px; margin-top:20px;}
         .row{display:flex; gap:12px;}
         .row > div{flex:1; display:flex; flex-direction:column; gap:6px;}
         label{font-size:0.82rem; color:var(--text-muted);}
@@ -76,7 +71,8 @@
             display:flex; justify-content:space-between; align-items:center;
             background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:12px 16px;
         }
-        .search-result-card .name{font-weight:600; display:flex; align-items:center; gap:8px;}
+        .search-result-card .name{font-weight:600; display:flex; align-items:center; gap:10px;}
+        .search-result-card .name img{width:32px; height:32px; border-radius:50%; object-fit:cover;}
         .search-result-card .id{font-family:'IBM Plex Mono',monospace; font-size:0.76rem; color:var(--text-muted);}
         .search-result-card button{
             background:var(--signal); color:#08110F; border:none;
@@ -101,15 +97,26 @@
 
         <div class="channel-list" id="channel-list"></div>
 
-        <form id="search-form">
+        <form id="twitch-search-form">
             <div>
-                <label for="searchQuery">配信者名で検索</label>
-                <input type="text" id="searchQuery" required placeholder="例: げまげま">
+                <label for="twitchSearchQuery">Twitchで検索</label>
+                <input type="text" id="twitchSearchQuery" required placeholder="例: げまげま">
             </div>
             <button type="submit">検索</button>
         </form>
 
-        <div class="search-results" id="search-results"></div>
+        <div class="search-results" id="twitch-search-results"></div>
+
+        <form id="youtube-search-form">
+            <div>
+                <label for="youtubeSearchQuery">YouTubeで検索</label>
+                <input type="text" id="youtubeSearchQuery" required placeholder="例: げまげま">
+            </div>
+            <button type="submit">検索</button>
+        </form>
+
+        <div class="search-results" id="youtube-search-results"></div>
+
         <div class="status-msg" id="channel-status"></div>
     </section>
 
@@ -174,15 +181,30 @@
         loadChannels();
     }
 
-    document.getElementById('search-form').addEventListener('submit', async (e) => {
+    function renderSearchResult(resultsEl, platform, thumbnailUrl, id, name, login) {
+        const card = document.createElement('div');
+        card.className = 'search-result-card';
+        card.innerHTML = `
+      <div class="name">
+        <img src="${thumbnailUrl}" alt="">
+        ${name}
+        <span class="id">(${id})</span>
+      </div>
+      <button>登録する</button>
+    `;
+        card.querySelector('button').addEventListener('click', () => registerChannel(platform, id, name, login));
+        resultsEl.appendChild(card);
+    }
+
+    document.getElementById('twitch-search-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const query = document.getElementById('searchQuery').value.trim();
-        const resultsEl = document.getElementById('search-results');
+        const query = document.getElementById('twitchSearchQuery').value.trim();
+        const resultsEl = document.getElementById('twitch-search-results');
         const statusEl = document.getElementById('channel-status');
         statusEl.textContent = '';
         resultsEl.innerHTML = '<div class="searching">検索中...</div>';
 
-        const res = await fetch(`/streamers/search?query=${encodeURIComponent(query)}`);
+        const res = await fetch(`/streamers/search/twitch?query=${encodeURIComponent(query)}`);
         const results = await res.json();
 
         resultsEl.innerHTML = '';
@@ -192,36 +214,49 @@
         }
 
         results.forEach(r => {
-            const card = document.createElement('div');
-            card.className = 'search-result-card';
-            card.innerHTML = `
-      <div class="name">
-        ${r.is_live ? '<span class="live-badge"></span>' : ''}
-        ${r.display_name}
-        <span class="id">(${r.id})</span>
-      </div>
-      <button>登録する</button>
-    `;
-            card.querySelector('button').addEventListener('click', () => registerChannel(r.id, r.display_name, r.broadcaster_login));
-            resultsEl.appendChild(card);
+            renderSearchResult(resultsEl, 'twitch', r.thumbnail_url, r.id, r.display_name, r.broadcaster_login);
         });
     });
 
-    async function registerChannel(platformChannelId, channelName, channelLogin) {
+    document.getElementById('youtube-search-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const query = document.getElementById('youtubeSearchQuery').value.trim();
+        const resultsEl = document.getElementById('youtube-search-results');
+        const statusEl = document.getElementById('channel-status');
+        statusEl.textContent = '';
+        resultsEl.innerHTML = '<div class="searching">検索中...</div>';
+
+        const res = await fetch(`/streamers/search/youtube?query=${encodeURIComponent(query)}`);
+        const results = await res.json();
+
+        resultsEl.innerHTML = '';
+        if (results.length === 0) {
+            resultsEl.innerHTML = '<div class="searching">見つかりませんでした</div>';
+            return;
+        }
+
+        results.forEach(r => {
+            renderSearchResult(resultsEl, 'youtube', r.thumbnailUrl, r.channelId, r.channelTitle, r.channelId);
+        });
+    });
+
+    async function registerChannel(platform, platformChannelId, channelName, channelLogin) {
         const statusEl = document.getElementById('channel-status');
         statusEl.textContent = '';
 
         const res = await fetch('/streamers/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
-            body: JSON.stringify({ platform: 'twitch', platformChannelId, channelName, channelLogin })
+            body: JSON.stringify({ platform, platformChannelId, channelName, channelLogin })
         });
 
         if (res.ok) {
             statusEl.textContent = '登録しました';
             statusEl.className = 'status-msg ok';
-            document.getElementById('search-results').innerHTML = '';
-            document.getElementById('search-form').reset();
+            document.getElementById('twitch-search-results').innerHTML = '';
+            document.getElementById('youtube-search-results').innerHTML = '';
+            document.getElementById('twitch-search-form').reset();
+            document.getElementById('youtube-search-form').reset();
             loadChannels();
         } else {
             let message = '登録に失敗しました';

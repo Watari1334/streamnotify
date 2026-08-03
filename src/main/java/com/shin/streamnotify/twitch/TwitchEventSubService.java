@@ -82,7 +82,7 @@ public class TwitchEventSubService {
     private record SubscriptionData(String id) {
     }
 
-    @Cacheable(value = "channelSearch", key = "#query")
+    @Cacheable(value = "twitchchannelSearch", key = "#query")
     public List<ChannelSearchResult> searchChannels(String query) {
         String appAccessToken = twitchAuthService.getAppAccessToken();
 
@@ -103,7 +103,7 @@ public class TwitchEventSubService {
             String id,
             String broadcaster_login,
             String display_name,
-            boolean is_live
+            String thumbnail_url
     ) {
     }
 }
