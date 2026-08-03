@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.http.ResponseEntity;
 
 @Service
 @RequiredArgsConstructor
@@ -33,14 +34,14 @@ public class YouTubeEventSubService {
         formData.add("hub.secret", eventSubSecret);
         formData.add("hub.lease_seconds", "432000");
 
-        String response = restClient.post()
+        ResponseEntity<String> response = restClient.post()
                 .uri(HUB_URL)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(formData)
                 .retrieve()
-                .body(String.class);
+                .toEntity(String.class);
 
-        System.out.println("PubSubHubbub購読結果: " + response);
+        System.out.println("PubSubHubbub購読結果、ステータス: " + response.getStatusCode());
     }
 
     public void unsubscribe(String channelId) {
