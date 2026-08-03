@@ -22,15 +22,19 @@ public class User {
     @Column(name = "user_name", nullable = false)
     private String userName;
 
-    @Column(name = "twitch_subject", unique = true)
-    private String twitchSubject;
+    @Column(name = "oauth_provider", nullable = false)
+    private String oauthProvider;
+
+    @Column(name = "oauth_subject", nullable = false)
+    private String oauthSubject;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    public User(String userName, String twitchSubject) {
+    public User(String userName, String oauthProvider, String oauthSubject) {
         this.userName = userName;
-        this.twitchSubject = twitchSubject;
+        this.oauthProvider = oauthProvider;
+        this.oauthSubject = oauthSubject;
         this.createdAt = LocalDateTime.now();
     }
 }

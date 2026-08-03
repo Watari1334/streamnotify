@@ -2,8 +2,8 @@ package com.shin.streamnotify.streamer;
 
 import com.shin.streamnotify.registration.RegistrationRepository;
 import com.shin.streamnotify.twitch.TwitchEventSubService;
+import com.shin.streamnotify.user.CurrentUserResolver;
 import com.shin.streamnotify.user.User;
-import com.shin.streamnotify.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
 class StreamerControllerTest {
 
     @Mock private StreamerRepository streamerRepository;
-    @Mock private UserRepository userRepository;
+    @Mock private CurrentUserResolver currentUserResolver;
     @Mock private RegistrationRepository registrationRepository;
     @Mock private TwitchEventSubService twitchEventSubService;
     @Mock private OidcUser oidcUser;
@@ -38,9 +38,7 @@ class StreamerControllerTest {
         StreamerRegistrationRequest request =
                 new StreamerRegistrationRequest("twitch", "12345", "テストチャンネル", "test_channel");
 
-        when(oidcUser.getSubject()).thenReturn("twitch-subject-123");
-        when(userRepository.findByTwitchSubject("twitch-subject-123"))
-                .thenReturn(Optional.of(currentUser));
+        when(currentUserResolver.resolve(oidcUser)).thenReturn(currentUser);
         when(streamerRepository.findByPlatformAndPlatformChannelId("twitch", "12345"))
                 .thenReturn(Optional.empty());
 
@@ -67,9 +65,7 @@ class StreamerControllerTest {
 
         Streamer existingStreamer = new Streamer("twitch", "12345", "テストチャンネル", "test_channel");
 
-        when(oidcUser.getSubject()).thenReturn("twitch-subject-456");
-        when(userRepository.findByTwitchSubject("twitch-subject-456"))
-                .thenReturn(Optional.of(currentUser));
+        when(currentUserResolver.resolve(oidcUser)).thenReturn(currentUser);
         when(streamerRepository.findByPlatformAndPlatformChannelId("twitch", "12345"))
                 .thenReturn(Optional.of(existingStreamer));
 
@@ -89,9 +85,8 @@ class StreamerControllerTest {
         StreamerRegistrationRequest request =
                 new StreamerRegistrationRequest("twitch", "12345", "テストチャンネル", "test_channel");
 
-        when(oidcUser.getSubject()).thenReturn("unknown-subject");
-        when(userRepository.findByTwitchSubject("unknown-subject"))
-                .thenReturn(Optional.empty());
+        when(currentUserResolver.resolve(oidcUser))
+                .thenThrow(new IllegalStateException("ユーザーが見つかりません"));
 
         // Act & Assert
         assertThatThrownBy(() -> streamerController.registerStreamer(oidcUser, request))
@@ -112,9 +107,7 @@ class StreamerControllerTest {
 
         Registration registration = new Registration(currentUser, streamer);
 
-        when(oidcUser.getSubject()).thenReturn("twitch-subject-123");
-        when(userRepository.findByTwitchSubject("twitch-subject-123"))
-                .thenReturn(Optional.of(currentUser));
+        when(currentUserResolver.resolve(oidcUser)).thenReturn(currentUser);
         when(currentUser.getUserId()).thenReturn(userId);
 
         when(registrationRepository.findByUser_UserIdAndStreamer_StreamerId(userId, streamerId))
@@ -145,9 +138,7 @@ class StreamerControllerTest {
         Registration registration = new Registration(currentUser, streamer);
         Registration anotherRegistration = new Registration(currentUser, streamer);
 
-        when(oidcUser.getSubject()).thenReturn("twitch-subject-123");
-        when(userRepository.findByTwitchSubject("twitch-subject-123"))
-                .thenReturn(Optional.of(currentUser));
+        when(currentUserResolver.resolve(oidcUser)).thenReturn(currentUser);
         when(currentUser.getUserId()).thenReturn(userId);
 
         when(registrationRepository.findByUser_UserIdAndStreamer_StreamerId(userId, streamerId))
@@ -165,15 +156,14 @@ class StreamerControllerTest {
         verify(streamerRepository, never()).delete(any(Streamer.class));
         assertThat(result).isEqualTo("削除しました");
     }
+
     @Test
     void 自分の登録が見つからない場合は例外が発生する() {
         // Arrange
         Long streamerId = 1L;
         Long userId = 100L;
 
-        when(oidcUser.getSubject()).thenReturn("twitch-subject-123");
-        when(userRepository.findByTwitchSubject("twitch-subject-123"))
-                .thenReturn(Optional.of(currentUser));
+        when(currentUserResolver.resolve(oidcUser)).thenReturn(currentUser);
         when(currentUser.getUserId()).thenReturn(userId);
 
         when(registrationRepository.findByUser_UserIdAndStreamer_StreamerId(userId, streamerId))

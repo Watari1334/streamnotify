@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 public class CustomOidcUserService extends OidcUserService {
 
     private final UserRepository userRepository;
+    private final CurrentUserResolver currentUserResolver;
 
     @Override
     public OidcUser loadUser(OidcUserRequest userRequest) {
@@ -20,23 +21,25 @@ public class CustomOidcUserService extends OidcUserService {
     }
 
     void provisionUser(OidcUser oidcUser) {
-        String twitchSubject = oidcUser.getSubject();
+        String provider = currentUserResolver.resolveProvider(oidcUser);
+        String subject = oidcUser.getSubject();
 
-        userRepository.findByTwitchSubject(twitchSubject)
+        userRepository.findByOauthProviderAndOauthSubject(provider, subject)
                 .orElseGet(() -> {
                     User newUser = new User(
-                            resolveUserName(oidcUser, twitchSubject),
-                            twitchSubject
+                            resolveUserName(oidcUser, provider, subject),
+                            provider,
+                            subject
                     );
                     return userRepository.save(newUser);
                 });
     }
 
-    private String resolveUserName(OidcUser oidcUser, String twitchSubject) {
+    private String resolveUserName(OidcUser oidcUser, String provider, String subject) {
         String preferredUsername = oidcUser.getPreferredUsername();
         if (preferredUsername != null && !preferredUsername.isBlank()) {
             return preferredUsername;
         }
-        return "twitch-user-" + twitchSubject;
+        return provider + "-user-" + subject;
     }
 }

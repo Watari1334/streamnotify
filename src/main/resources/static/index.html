@@ -62,11 +62,7 @@
         }
         .cta-btn:hover{transform:translateY(-1px);}
         .cta-btn.twitch{background:var(--twitch); color:#fff;}
-        .cta-btn.youtube{
-            background:var(--surface); color:var(--text-muted);
-            border:1px solid var(--border); cursor:not-allowed;
-        }
-        .cta-btn.youtube:hover{transform:none;}
+        .cta-btn.youtube{background:var(--youtube); color:#fff;}
         .badge-soon{
             font-family:'IBM Plex Mono',monospace; font-size:0.65rem;
             background:var(--border); color:var(--text-muted);
@@ -130,9 +126,7 @@
 
         <div class="cta-group">
             <a class="cta-btn twitch" href="/oauth2/authorization/twitch">Twitchでログイン</a>
-            <span class="cta-btn youtube" aria-disabled="true">
-                YouTubeでログイン<span class="badge-soon">近日公開</span>
-            </span>
+            <a class="cta-btn youtube" href="/oauth2/authorization/google">YouTubeでログイン</a>
         </div>
 
         <div class="signal-meter" aria-hidden="true">

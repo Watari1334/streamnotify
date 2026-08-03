@@ -6,5 +6,5 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    Optional<User> findByTwitchSubject(String twitchSubject);
+    Optional<User> findByOauthProviderAndOauthSubject(String oauthProvider, String oauthSubject);
 }

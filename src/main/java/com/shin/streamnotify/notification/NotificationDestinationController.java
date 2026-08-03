@@ -1,7 +1,7 @@
 package com.shin.streamnotify.notification;
 
+import com.shin.streamnotify.user.CurrentUserResolver;
 import com.shin.streamnotify.user.User;
-import com.shin.streamnotify.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
@@ -17,14 +17,13 @@ import java.util.Optional;
 public class NotificationDestinationController {
 
     private final NotificationDestinationRepository notificationDestinationRepository;
-    private final UserRepository userRepository;
+    private final CurrentUserResolver currentUserResolver;
 
     @GetMapping("/notifications/destinations")
     public NotificationDestinationResponse getDestination(
             @AuthenticationPrincipal OidcUser oidcUser
     ) {
-        User currentUser = userRepository.findByTwitchSubject(oidcUser.getSubject())
-                .orElseThrow(() -> new IllegalStateException("ユーザーが見つかりません"));
+        User currentUser = currentUserResolver.resolve(oidcUser);
 
         Optional<NotificationDestination> destination =
                 notificationDestinationRepository.findByUser_UserId(currentUser.getUserId());
@@ -39,8 +38,7 @@ public class NotificationDestinationController {
             @AuthenticationPrincipal OidcUser oidcUser,
             @RequestBody NotificationDestinationRequest request
     ) {
-        User currentUser = userRepository.findByTwitchSubject(oidcUser.getSubject())
-                .orElseThrow(() -> new IllegalStateException("ユーザーが見つかりません"));
+        User currentUser = currentUserResolver.resolve(oidcUser);
 
         NotificationDestination destination = notificationDestinationRepository
                 .findByUser_UserId(currentUser.getUserId())

@@ -3,8 +3,8 @@ package com.shin.streamnotify.streamer;
 import com.shin.streamnotify.registration.Registration;
 import com.shin.streamnotify.registration.RegistrationRepository;
 import com.shin.streamnotify.twitch.TwitchEventSubService;
+import com.shin.streamnotify.user.CurrentUserResolver;
 import com.shin.streamnotify.user.User;
-import com.shin.streamnotify.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,7 +22,7 @@ import java.util.Optional;
 public class StreamerController {
 
     private final StreamerRepository streamerRepository;
-    private final UserRepository userRepository;
+    private final CurrentUserResolver currentUserResolver;
     private final RegistrationRepository registrationRepository;
     private final TwitchEventSubService twitchEventSubService;
 
@@ -32,8 +32,7 @@ public class StreamerController {
             @AuthenticationPrincipal OidcUser oidcUser,
             @RequestBody StreamerRegistrationRequest request
     ) {
-        User currentUser = userRepository.findByTwitchSubject(oidcUser.getSubject())
-                .orElseThrow(() -> new IllegalStateException("ユーザーが見つかりません"));
+        User currentUser = currentUserResolver.resolve(oidcUser);
 
         long currentCount = registrationRepository.countByUser_UserId(currentUser.getUserId());
         if (currentCount >= 20) {
@@ -65,8 +64,7 @@ public class StreamerController {
     public List<StreamerResponse> listStreamers(
             @AuthenticationPrincipal OidcUser oidcUser
     ) {
-        User currentUser = userRepository.findByTwitchSubject(oidcUser.getSubject())
-                .orElseThrow(() -> new IllegalStateException("ユーザーが見つかりません"));
+        User currentUser = currentUserResolver.resolve(oidcUser);
 
         return registrationRepository.findByUser_UserId(currentUser.getUserId()).stream()
                 .map(registration -> new StreamerResponse(
@@ -90,8 +88,7 @@ public class StreamerController {
             @AuthenticationPrincipal OidcUser oidcUser,
             @PathVariable Long streamerId
     ) {
-        User currentUser = userRepository.findByTwitchSubject(oidcUser.getSubject())
-                .orElseThrow(() -> new IllegalStateException("ユーザーが見つかりません"));
+        User currentUser = currentUserResolver.resolve(oidcUser);
 
         Registration registration = registrationRepository
                 .findByUser_UserIdAndStreamer_StreamerId(currentUser.getUserId(), streamerId)
