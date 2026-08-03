@@ -29,16 +29,18 @@ public class YouTubeEventSubService {
         formData.add("hub.mode", "subscribe");
         formData.add("hub.topic", topicUrl);
         formData.add("hub.callback", callbackUrl);
-        formData.add("hub.verify", "async");
+        formData.add("hub.verify", "sync");
         formData.add("hub.secret", eventSubSecret);
         formData.add("hub.lease_seconds", "432000");
 
-        restClient.post()
+        String response = restClient.post()
                 .uri(HUB_URL)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(formData)
                 .retrieve()
-                .toBodilessEntity();
+                .body(String.class);
+
+        System.out.println("PubSubHubbub購読結果: " + response);
     }
 
     public void unsubscribe(String channelId) {
