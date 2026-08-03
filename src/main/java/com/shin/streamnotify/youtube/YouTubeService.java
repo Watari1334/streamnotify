@@ -58,4 +58,30 @@ public class YouTubeService {
             String thumbnailUrl
     ) {
     }
+
+    public boolean isLive(String videoId) {
+        VideoResponse response = restClient.get()
+                .uri("https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=" + videoId + "&key=" + apiKey)
+                .retrieve()
+                .body(VideoResponse.class);
+
+        if (response.items().isEmpty()) {
+            return false;
+        }
+
+        LiveStreamingDetails details = response.items().get(0).liveStreamingDetails();
+
+        return details != null
+                && details.actualStartTime() != null
+                && details.actualEndTime() == null;
+    }
+
+    private record VideoResponse(List<VideoItem> items) {
+    }
+
+    private record VideoItem(LiveStreamingDetails liveStreamingDetails) {
+    }
+
+    private record LiveStreamingDetails(String actualStartTime, String actualEndTime) {
+    }
 }

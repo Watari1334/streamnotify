@@ -5,6 +5,7 @@ import com.shin.streamnotify.registration.RegistrationRepository;
 import com.shin.streamnotify.twitch.TwitchEventSubService;
 import com.shin.streamnotify.user.CurrentUserResolver;
 import com.shin.streamnotify.user.User;
+import com.shin.streamnotify.youtube.YouTubeEventSubService;
 import com.shin.streamnotify.youtube.YouTubeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,6 +25,7 @@ public class StreamerController {
     private final CurrentUserResolver currentUserResolver;
     private final RegistrationRepository registrationRepository;
     private final TwitchEventSubService twitchEventSubService;
+    private final YouTubeEventSubService youTubeEventSubService;
     private final YouTubeService youTubeService;
 
     @Transactional
@@ -51,10 +53,14 @@ public class StreamerController {
         Registration registration = new Registration(currentUser, streamer);
         registrationRepository.save(registration);
 
-        if (isNewStreamer && "twitch".equals(request.platform())) {
-            String subscriptionId = twitchEventSubService.subscribeToStreamOnline(request.platformChannelId());
-            streamer.setTwitchSubscriptionId(subscriptionId);
-            streamerRepository.save(streamer);
+        if (isNewStreamer) {
+            if ("twitch".equals(request.platform())) {
+                String subscriptionId = twitchEventSubService.subscribeToStreamOnline(request.platformChannelId());
+                streamer.setTwitchSubscriptionId(subscriptionId);
+                streamerRepository.save(streamer);
+            } else if ("youtube".equals(request.platform())) {
+                youTubeEventSubService.subscribe(request.platformChannelId());
+            }
         }
 
         return "登録しました: " + streamer.getChannelName();
@@ -106,8 +112,10 @@ public class StreamerController {
 
         if (remainingRegistrations.isEmpty()) {
             Streamer streamer = registration.getStreamer();
-            if (streamer.getTwitchSubscriptionId() != null) {
+            if ("twitch".equals(streamer.getPlatform()) && streamer.getTwitchSubscriptionId() != null) {
                 twitchEventSubService.unsubscribe(streamer.getTwitchSubscriptionId());
+            } else if ("youtube".equals(streamer.getPlatform())) {
+                youTubeEventSubService.unsubscribe(streamer.getPlatformChannelId());
             }
             streamerRepository.delete(streamer);
         }
