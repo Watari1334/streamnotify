@@ -49,4 +49,5 @@ jobs:
           GOOGLE_CLIENT_SECRET: dummy
           YOUTUBE_API_KEY: dummy
           YOUTUBE_EVENTSUB_SECRET: dummy
+          LOG_PATH: /home/runner/work/streamnotify/streamnotify/logs
         run: ./mvnw test

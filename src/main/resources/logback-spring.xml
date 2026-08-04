@@ -4,7 +4,7 @@
     <!-- Spring Bootの、デフォルト設定(コンソール出力など)を、引き継ぐ -->
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <property name="LOG_PATH" value="/var/log/streamnotify"/>
+    <property name="LOG_PATH" value="${LOG_PATH:-/var/log/streamnotify}"/>
     <property name="LOG_FILE" value="${LOG_PATH}/app.log"/>
 
     <!-- コンソール出力(今まで通り、journalctlでも、見られる) -->
