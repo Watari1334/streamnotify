@@ -39,7 +39,14 @@ jobs:
 
       - name: Run tests
         env:
+          DB_URL: jdbc:postgresql://localhost:5432/streamnotify
+          DB_USERNAME: streamnotify
+          DB_PASSWORD: streamnotify
           TWITCH_CLIENT_ID: dummy
           TWITCH_CLIENT_SECRET: dummy
           TWITCH_EVENTSUB_SECRET: dummy
+          GOOGLE_CLIENT_ID: dummy
+          GOOGLE_CLIENT_SECRET: dummy
+          YOUTUBE_API_KEY: dummy
+          YOUTUBE_EVENTSUB_SECRET: dummy
         run: ./mvnw test
