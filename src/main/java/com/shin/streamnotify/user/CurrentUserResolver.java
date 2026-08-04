@@ -4,18 +4,37 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 
+/**
+ * OIDC認証情報(OidcUser)から、アプリ内のUserエンティティを解決するクラス。
+ * TwitchとGoogleの両方のOIDCログインに対応する。
+ */
 @Service
 @RequiredArgsConstructor
 public class CurrentUserResolver {
 
     private final UserRepository userRepository;
 
+    /**
+     * OidcUserに対応するUserエンティティをDBから取得する。
+     * 該当ユーザーが存在しない場合は例外を投げる。
+     *
+     * @param oidcUser Spring Securityが管理する認証済みユーザー情報
+     * @return DBに保存されているUserエンティティ
+     * @throws IllegalStateException 該当ユーザーがDBに存在しない場合
+     */
     public User resolve(OidcUser oidcUser) {
         String provider = resolveProvider(oidcUser);
         return userRepository.findByOauthProviderAndOauthSubject(provider, oidcUser.getSubject())
                 .orElseThrow(() -> new IllegalStateException("ユーザーが見つかりません"));
     }
 
+    /**
+     * OidcUserのissuer(iss)クレームから、ログインに使われたプロバイダを判定する。
+     * 判定できない場合は"unknown"を返す。
+     *
+     * @param oidcUser Spring Securityが管理する認証済みユーザー情報
+     * @return "twitch"、"google"、またはどちらでもない場合は"unknown"
+     */
     public String resolveProvider(OidcUser oidcUser) {
         String issuer = oidcUser.getIssuer().toString();
         if (issuer.contains("twitch")) {
