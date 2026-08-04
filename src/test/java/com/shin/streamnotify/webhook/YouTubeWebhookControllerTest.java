@@ -9,13 +9,17 @@ import com.shin.streamnotify.streamer.Streamer;
 import com.shin.streamnotify.streamer.StreamerRepository;
 import com.shin.streamnotify.user.User;
 import com.shin.streamnotify.youtube.YouTubeService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.ResponseEntity;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,9 +34,18 @@ class YouTubeWebhookControllerTest {
     @Mock private NotificationDestinationRepository notificationDestinationRepository;
     @Mock private DiscordNotificationService discordNotificationService;
     @Mock private YouTubeService youTubeService;
+    @Mock private StringRedisTemplate redisTemplate;
+    @Mock private ValueOperations<String, String> valueOperations;
 
     @InjectMocks
     private YouTubeWebhookController youTubeWebhookController;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
+                .thenReturn(true);
+    }
 
     @Test
     void 検証リクエストにはchallengeをそのまま返す() {
