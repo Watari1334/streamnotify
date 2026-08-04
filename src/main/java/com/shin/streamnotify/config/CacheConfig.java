@@ -2,6 +2,7 @@ package com.shin.streamnotify.config;
 
 import com.shin.streamnotify.twitch.TwitchEventSubService.ChannelSearchResult;
 import com.shin.streamnotify.youtube.YouTubeService;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 @Configuration
+@EnableCaching
 public class CacheConfig {
 
     @Bean
