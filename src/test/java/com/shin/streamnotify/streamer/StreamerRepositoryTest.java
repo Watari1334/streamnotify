@@ -1,7 +1,5 @@
 package com.shin.streamnotify.streamer;
 
-import org.flywaydb.core.Flyway;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -17,15 +15,6 @@ class StreamerRepositoryTest {
 
     @Autowired
     private StreamerRepository streamerRepository;
-
-    @Autowired
-    private Flyway flyway;
-
-    @BeforeEach
-    void setUp() {
-        flyway.clean();
-        flyway.migrate();
-    }
 
     @Test
     void 配信者を保存して検索できる() {
