@@ -9,6 +9,7 @@ import com.shin.streamnotify.streamer.Streamer;
 import com.shin.streamnotify.streamer.StreamerRepository;
 import com.shin.streamnotify.youtube.YouTubeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -30,9 +32,11 @@ public class YouTubeWebhookController {
     private final NotificationDestinationRepository notificationDestinationRepository;
     private final DiscordNotificationService discordNotificationService;
     private final YouTubeService youTubeService;
+    private final StringRedisTemplate redisTemplate;
 
     private static final Pattern VIDEO_ID_PATTERN = Pattern.compile("<yt:videoId>(.*?)</yt:videoId>");
     private static final Pattern CHANNEL_ID_PATTERN = Pattern.compile("<yt:channelId>(.*?)</yt:channelId>");
+    private static final Duration NOTIFIED_TTL = Duration.ofHours(24);
 
     @GetMapping("/webhooks/youtube")
     public ResponseEntity<String> verify(
@@ -57,9 +61,28 @@ public class YouTubeWebhookController {
             return ResponseEntity.ok().build();
         }
 
+        if (!tryMarkAsNotified(videoId)) {
+            return ResponseEntity.ok().build();
+        }
+
         handleStreamOnlineNotification(channelId, videoId);
 
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * videoIdに対して初めての通知かどうかを判定し、初めてであれば通知済みとして記録する。
+     * Redisのsetifabsent(SETNX)を使うことで、複数リクエストがほぼ同時に来ても
+     * 通知が1回だけになることを保証する。
+     *
+     * @param videoId 対象のYouTube動画ID
+     * @return 初めての通知であればtrue、既に通知済みであればfalse
+     */
+    private boolean tryMarkAsNotified(String videoId) {
+        String key = "youtube:notified:" + videoId;
+        Boolean isFirstNotification = redisTemplate.opsForValue()
+                .setIfAbsent(key, "1", NOTIFIED_TTL);
+        return Boolean.TRUE.equals(isFirstNotification);
     }
 
     private void handleStreamOnlineNotification(String channelId, String videoId) {
