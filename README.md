@@ -37,10 +37,15 @@ flowchart TD
     Web01 --> Cache[(ElastiCache Valkey)]
     Web02 --> Cache
     Web01 --> Twitch[Twitch Helix API / EventSub]
+    Web02 --> Twitch
     Web01 --> YouTube[YouTube Data API / PubSubHubbub]
+    Web02 --> YouTube
     Twitch -.配信開始通知.-> Web01
+    Twitch -.配信開始通知.-> Web02
     YouTube -.配信開始通知.-> Web01
+    YouTube -.配信開始通知.-> Web02
     Web01 --> Discord[Discord Webhook]
+    Web02 --> Discord
     CW[CloudWatch] -.監視.-> Web01
     CW -.監視.-> Web02
     CW -.監視.-> RDS
