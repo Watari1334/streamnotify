@@ -30,24 +30,24 @@ https://streamnotify-app.com
 ```mermaid
 flowchart TD
     User[ユーザー] -->|HTTPS| ALB[Application Load Balancer]
-    ALB --> Web01[EC2: web01]
-    ALB --> Web02[EC2: web02]
-    Web01 --> RDS[(RDS PostgreSQL)]
-    Web02 --> RDS
-    Web01 --> Cache[(ElastiCache Valkey)]
-    Web02 --> Cache
-    Web01 --> Twitch[Twitch Helix API / EventSub]
-    Web02 --> Twitch
-    Web01 --> YouTube[YouTube Data API / PubSubHubbub]
-    Web02 --> YouTube
-    Twitch -.配信開始通知.-> Web01
-    Twitch -.配信開始通知.-> Web02
-    YouTube -.配信開始通知.-> Web01
-    YouTube -.配信開始通知.-> Web02
-    Web01 --> Discord[Discord Webhook]
-    Web02 --> Discord
-    CW[CloudWatch] -.監視.-> Web01
-    CW -.監視.-> Web02
+
+    subgraph EC2["EC2(web01 / web02)"]
+        Web01[web01]
+        Web02[web02]
+    end
+
+    ALB --> Web01
+    ALB --> Web02
+
+    EC2 --> RDS[(RDS PostgreSQL)]
+    EC2 --> Cache[(ElastiCache Valkey)]
+    EC2 --> Twitch[Twitch Helix API / EventSub]
+    EC2 --> YouTube[YouTube Data API / PubSubHubbub]
+    Twitch -.配信開始通知.-> EC2
+    YouTube -.配信開始通知.-> EC2
+    EC2 --> Discord[Discord Webhook]
+
+    CW[CloudWatch] -.監視.-> EC2
     CW -.監視.-> RDS
 ```
 
