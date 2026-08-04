@@ -101,8 +101,10 @@ class YouTubeWebhookControllerTest {
         // Assert
         verify(discordNotificationService).sendStreamOnlineNotification(
                 "https://discord.com/webhook/test",
+                "youtube",
                 "テストチャンネル",
-                "test_channel"
+                "test_channel",
+                "video123"
         );
     }
 
@@ -126,6 +128,6 @@ class YouTubeWebhookControllerTest {
         youTubeWebhookController.handleNotification(xmlBody);
 
         // Assert
-        verify(discordNotificationService, never()).sendStreamOnlineNotification(anyString(), anyString(), anyString());
+        verify(discordNotificationService, never()).sendStreamOnlineNotification(anyString(), anyString(), anyString(), anyString(), anyString());
     }
 }

@@ -98,8 +98,10 @@ public class TwitchWebhookController {
             destinationOpt.ifPresent(destination ->
                     discordNotificationService.sendStreamOnlineNotification(
                             destination.getDiscordWebhookUrl(),
+                            streamer.getPlatform(),
                             streamer.getChannelName(),
-                            streamer.getChannelLogin()
+                            streamer.getChannelLogin(),
+                            null
                     )
             );
         }

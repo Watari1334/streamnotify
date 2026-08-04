@@ -57,12 +57,12 @@ public class YouTubeWebhookController {
             return ResponseEntity.ok().build();
         }
 
-        handleStreamOnlineNotification(channelId);
+        handleStreamOnlineNotification(channelId, videoId);
 
         return ResponseEntity.ok().build();
     }
 
-    private void handleStreamOnlineNotification(String channelId) {
+    private void handleStreamOnlineNotification(String channelId, String videoId) {
         Optional<Streamer> streamerOpt = streamerRepository
                 .findByPlatformAndPlatformChannelId("youtube", channelId);
 
@@ -83,8 +83,10 @@ public class YouTubeWebhookController {
             destinationOpt.ifPresent(destination ->
                     discordNotificationService.sendStreamOnlineNotification(
                             destination.getDiscordWebhookUrl(),
+                            streamer.getPlatform(),
                             streamer.getChannelName(),
-                            streamer.getChannelLogin()
+                            streamer.getChannelLogin(),
+                            videoId
                     )
             );
         }
