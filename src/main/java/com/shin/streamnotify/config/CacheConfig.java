@@ -18,10 +18,30 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Redis(Valkey)を使ったキャッシュの設定。
+ * Twitch/YouTubeのチャンネル検索結果をキャッシュすることで、
+ * 特にYouTube Data APIのクォータ消費(search.listは1回100ユニット、
+ * 1日10,000ユニットが上限)を抑える目的がある。
+ *
+ * 値の保存形式にはあえてJDK標準のバイナリ直列化ではなくJSON形式を選んでいるため、
+ * Javaのジェネリクス(List&lt;T&gt;)は型消去により実行時に型情報が失われる。
+ * そのためキャッシュからの復元時に型を正しく戻せるよう、
+ * JavaTypeを明示的に組み立ててシリアライザに渡している。
+ */
 @Configuration
 @EnableCaching
 public class CacheConfig {
 
+    /**
+     * Twitch/YouTubeの検索結果キャッシュを管理するRedisCacheManagerを構築する。
+     * デフォルトはTTL5分。YouTube検索(youtubeChannelSearch)のみ、
+     * クォータの厳しさを考慮してTTLを24時間に延長している。
+     *
+     * @param connectionFactory Redis(Valkey)への接続情報。application.propertiesの
+     *                          spring.data.redis設定からSpring Bootが自動構成する
+     * @return TwitchとYouTubeそれぞれ専用の設定を持つRedisCacheManager
+     */
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
