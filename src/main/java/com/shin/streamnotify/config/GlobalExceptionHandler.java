@@ -1,6 +1,7 @@
 package com.shin.streamnotify.config;
 
 import com.shin.streamnotify.streamer.ChannelLimitExceededException;
+import com.shin.streamnotify.streamer.SearchLimitExceededException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -25,6 +26,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleChannelLimitExceeded(ChannelLimitExceededException e) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+    }
+
+    /**
+     * SearchLimitExceededExceptionを、429 Too Many Requestsとメッセージ入りのJSONに変換する。
+     *
+     * @param e スローされた例外
+     * @return エラーメッセージを含むレスポンス
+     */
+    @ExceptionHandler(SearchLimitExceededException.class)
+    public ResponseEntity<Map<String, String>> handleSearchLimitExceeded(SearchLimitExceededException e) {
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(Map.of("message", e.getMessage()));
     }
 }
