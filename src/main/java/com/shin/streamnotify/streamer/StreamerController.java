@@ -44,26 +44,28 @@ public class StreamerController {
         Optional<Streamer> existingStreamer = streamerRepository
                 .findByPlatformAndPlatformChannelId(request.platform(), request.platformChannelId());
 
-        boolean isNewStreamer = existingStreamer.isEmpty();
-
-        Streamer streamer = existingStreamer.orElseGet(() -> streamerRepository.save(
-                new Streamer(request.platform(), request.platformChannelId(), request.channelName(), request.channelLogin())
-        ));
+        Streamer streamer = existingStreamer.orElseGet(() -> registerNewStreamerAndSubscribe(request));
 
         Registration registration = new Registration(currentUser, streamer);
         registrationRepository.save(registration);
 
-        if (isNewStreamer) {
-            if ("twitch".equals(request.platform())) {
-                String subscriptionId = twitchEventSubService.subscribeToStreamOnline(request.platformChannelId());
-                streamer.setTwitchSubscriptionId(subscriptionId);
-                streamerRepository.save(streamer);
-            } else if ("youtube".equals(request.platform())) {
-                youTubeEventSubService.subscribe(request.platformChannelId());
-            }
+        return "登録しました: " + streamer.getChannelName();
+    }
+
+    private Streamer registerNewStreamerAndSubscribe(StreamerRegistrationRequest request) {
+        Streamer streamer = streamerRepository.save(
+                new Streamer(request.platform(), request.platformChannelId(), request.channelName(), request.channelLogin())
+        );
+
+        if ("twitch".equals(request.platform())) {
+            String subscriptionId = twitchEventSubService.subscribeToStreamOnline(request.platformChannelId());
+            streamer.setTwitchSubscriptionId(subscriptionId);
+            streamerRepository.save(streamer);
+        } else if ("youtube".equals(request.platform())) {
+            youTubeEventSubService.subscribe(request.platformChannelId());
         }
 
-        return "登録しました: " + streamer.getChannelName();
+        return streamer;
     }
 
     @GetMapping("/streamers")
