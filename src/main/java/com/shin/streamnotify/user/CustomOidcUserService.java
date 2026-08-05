@@ -6,6 +6,10 @@ import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 
+/**
+ * OIDCログイン成功時のフック。認証情報の取得に加えて、
+ * 初回ログイン時にアプリ内のUserレコードを自動作成する。
+ */
 @Service
 @RequiredArgsConstructor
 public class CustomOidcUserService extends OidcUserService {
@@ -20,26 +24,27 @@ public class CustomOidcUserService extends OidcUserService {
         return oidcUser;
     }
 
+    /**
+     * OidcUserに対応するUserレコードがDBに存在しなければ、新規作成する。
+     * 既に存在する場合は何もしない。
+     *
+     * @param oidcUser 認証済みのOIDCユーザー情報
+     */
     void provisionUser(OidcUser oidcUser) {
         String provider = currentUserResolver.resolveProvider(oidcUser);
         String subject = oidcUser.getSubject();
 
-        userRepository.findByOauthProviderAndOauthSubject(provider, subject)
-                .orElseGet(() -> {
-                    User newUser = new User(
-                            resolveUserName(oidcUser, provider, subject),
-                            provider,
-                            subject
-                    );
-                    return userRepository.save(newUser);
-                });
-    }
+        boolean userExists = userRepository
+                .findByOauthProviderAndOauthSubject(provider, subject)
+                .isPresent();
 
-    private String resolveUserName(OidcUser oidcUser, String provider, String subject) {
-        String preferredUsername = oidcUser.getPreferredUsername();
-        if (preferredUsername != null && !preferredUsername.isBlank()) {
-            return preferredUsername;
+        if (!userExists) {
+            User newUser = new User(
+                    currentUserResolver.resolveDisplayName(oidcUser),
+                    provider,
+                    subject
+            );
+            userRepository.save(newUser);
         }
-        return provider + "-user-" + subject;
     }
 }

@@ -45,4 +45,20 @@ public class CurrentUserResolver {
         }
         return "unknown";
     }
+
+    /**
+     * OidcUserのpreferred_usernameクレームから表示名を決定する。
+     * クレームが無い場合は"プロバイダ名-user-サブジェクトID"を仮の表示名とする。
+     *
+     * @param oidcUser 認証済みのOIDCユーザー情報
+     * @return 決定された表示名
+     */
+    public String resolveDisplayName(OidcUser oidcUser) {
+        String preferredUsername = oidcUser.getPreferredUsername();
+        if (preferredUsername != null && !preferredUsername.isBlank()) {
+            return preferredUsername;
+        }
+        String provider = resolveProvider(oidcUser);
+        return provider + "-user-" + oidcUser.getSubject();
+    }
 }

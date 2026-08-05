@@ -7,7 +7,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
-import java.net.URL;
 import java.util.Optional;
 
 import static org.mockito.Mockito.*;
@@ -23,11 +22,11 @@ class CustomOidcUserServiceTest {
     private CustomOidcUserService customOidcUserService;
 
     @Test
-    void 初回ログインで新しいUserが作られる() throws Exception {
+    void 初回ログインで新しいUserが作られる() {
         // Arrange
         when(oidcUser.getSubject()).thenReturn("twitch-subject-123");
-        when(oidcUser.getPreferredUsername()).thenReturn("わたり");
         when(currentUserResolver.resolveProvider(oidcUser)).thenReturn("twitch");
+        when(currentUserResolver.resolveDisplayName(oidcUser)).thenReturn("わたり");
 
         when(userRepository.findByOauthProviderAndOauthSubject("twitch", "twitch-subject-123"))
                 .thenReturn(Optional.empty());
