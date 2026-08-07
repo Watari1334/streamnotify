@@ -1,6 +1,7 @@
 package com.shin.streamnotify.twitch;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -8,12 +9,17 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
+import java.time.Instant;
+
 /**
  * Twitch APIを呼ぶためのアプリアクセストークンを取得するサービス。
  * OAuth2のクライアントクレデンシャルズフロー(grant_type=client_credentials)を使い、
  * 特定ユーザーではなくアプリ自体の権限でトークンを取得する。
  * ユーザーのTwitchログイン(authorization_code方式)とは別の仕組み。
+ * トークンは有効期限内であればインスタンス内にキャッシュし、
+ * 呼び出しのたびにTwitchへリクエストを送らないようにしている。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TwitchAuthService {
@@ -26,14 +32,24 @@ public class TwitchAuthService {
     @Value("${spring.security.oauth2.client.registration.twitch.client-secret}")
     private String clientSecret;
 
+    // 有効期限ぎりぎりでの失効を避けるための余裕(秒)
+    private static final long EXPIRY_MARGIN_SECONDS = 60;
+
+    private volatile String cachedToken;
+    private volatile Instant tokenExpiresAt;
+
     /**
-     * Twitchのアプリアクセストークンを新規取得する。
-     * 呼び出しのたびにTwitchの認証サーバーへリクエストを送る
-     * (トークンの有効期限内での使い回し・キャッシュは行っていない)。
+     * Twitchのアプリアクセストークンを取得する。
+     * キャッシュ済みのトークンが有効期限内であればそれを返し、
+     * 無ければ(または期限切れなら)新規に取得してキャッシュする。
      *
      * @return Twitch API呼び出しに使うアクセストークン
      */
-    public String getAppAccessToken() {
+    public synchronized String getAppAccessToken() {
+        if (cachedToken != null && Instant.now().isBefore(tokenExpiresAt)) {
+            return cachedToken;
+        }
+
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("client_id", clientId);
         form.add("client_secret", clientSecret);
@@ -46,7 +62,12 @@ public class TwitchAuthService {
                 .retrieve()
                 .body(TokenResponse.class);
 
-        return response.accessToken();
+        cachedToken = response.accessToken();
+        tokenExpiresAt = Instant.now().plusSeconds(response.expiresIn() - EXPIRY_MARGIN_SECONDS);
+
+        log.info("Twitchアプリアクセストークンを新規取得しました。有効期限: {}", tokenExpiresAt);
+
+        return cachedToken;
     }
 
     /**
@@ -63,6 +84,10 @@ public class TwitchAuthService {
     ) {
         String accessToken() {
             return access_token;
+        }
+
+        long expiresIn() {
+            return expires_in;
         }
     }
 }

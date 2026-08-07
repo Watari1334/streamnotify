@@ -12,8 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TwitchEventSub(配信通知)の購読管理と、チャンネル検索を扱うサービス。
- * 実際の配信開始検知・通知処理はTwitchWebhookControllerが担当する。
+ * TwitchEventSubの購読管理と、チャンネル検索を扱うサービス。
  */
 @Slf4j
 @Service
@@ -67,6 +66,12 @@ public class TwitchEventSubService {
         return response.data().get(0).id();
     }
 
+    private record SubscriptionResponse(List<SubscriptionData> data) {
+    }
+
+    private record SubscriptionData(String id) {
+    }
+
     /**
      * 指定した購読IDのEventSub購読を解除する。
      *
@@ -81,12 +86,6 @@ public class TwitchEventSubService {
                 .header("Client-Id", clientId)
                 .retrieve()
                 .toBodilessEntity();
-    }
-
-    private record SubscriptionResponse(List<SubscriptionData> data) {
-    }
-
-    private record SubscriptionData(String id) {
     }
 
     /**
