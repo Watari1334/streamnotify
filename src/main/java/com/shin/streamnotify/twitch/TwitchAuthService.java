@@ -2,7 +2,6 @@ package com.shin.streamnotify.twitch;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -40,12 +39,9 @@ public class TwitchAuthService {
         form.add("client_secret", clientSecret);
         form.add("grant_type", "client_credentials");
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
         TokenResponse response = restClient.post()
                 .uri("https://id.twitch.tv/oauth2/token")
-                .headers(h -> h.addAll(headers))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(form)
                 .retrieve()
                 .body(TokenResponse.class);

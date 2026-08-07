@@ -15,7 +15,7 @@ import org.springframework.web.client.RestClient;
 import java.util.List;
 
 /**
- * YouTubeのPubSubHubbub購読管理、チャンネル検索、配信中判定を扱うサービス。
+ * YouTubeのPubSubHubbubの購読管理、チャンネル検索、配信中判定を扱うサービス。
  */
 @Slf4j
 @Service

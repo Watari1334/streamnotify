@@ -12,7 +12,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TwitchのEventSub(配信検知)とチャンネル検索を扱うサービス。
+ * TwitchEventSub(配信通知)の購読管理と、チャンネル検索を扱うサービス。
+ * 実際の配信開始検知・通知処理はTwitchWebhookControllerが担当する。
  */
 @Slf4j
 @Service
@@ -80,22 +81,6 @@ public class TwitchEventSubService {
                 .header("Client-Id", clientId)
                 .retrieve()
                 .toBodilessEntity();
-    }
-
-    /**
-     * 現在登録されているEventSub購読の一覧を、Twitch APIのレスポンスをそのまま文字列で返す。
-     *
-     * @return Twitch APIから返される購読一覧のJSON文字列
-     */
-    public String listSubscriptions() {
-        String appAccessToken = twitchAuthService.getAppAccessToken();
-
-        return restClient.get()
-                .uri("https://api.twitch.tv/helix/eventsub/subscriptions")
-                .header("Authorization", "Bearer " + appAccessToken)
-                .header("Client-Id", clientId)
-                .retrieve()
-                .body(String.class);
     }
 
     private record SubscriptionResponse(List<SubscriptionData> data) {
