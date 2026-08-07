@@ -1,7 +1,7 @@
 package com.shin.streamnotify.config;
 
 import com.shin.streamnotify.twitch.TwitchEventSubService.ChannelSearchResult;
-import com.shin.streamnotify.youtube.YouTubeService;
+import com.shin.streamnotify.youtube.YouTubeEventSubService;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -61,7 +61,7 @@ public class CacheConfig {
         );
 
         JavaType youtubeChannelSearchListType = TypeFactory.createDefaultInstance()
-                .constructCollectionType(List.class, YouTubeService.ChannelSearchResult.class);
+                .constructCollectionType(List.class, YouTubeEventSubService.ChannelSearchResult.class);
 
         RedisCacheConfiguration youtubeChannelSearchConfig = defaultConfig
                 .entryTtl(Duration.ofHours(24))

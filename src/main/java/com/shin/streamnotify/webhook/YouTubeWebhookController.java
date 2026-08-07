@@ -7,7 +7,7 @@ import com.shin.streamnotify.registration.Registration;
 import com.shin.streamnotify.registration.RegistrationRepository;
 import com.shin.streamnotify.streamer.Streamer;
 import com.shin.streamnotify.streamer.StreamerRepository;
-import com.shin.streamnotify.youtube.YouTubeService;
+import com.shin.streamnotify.youtube.YouTubeEventSubService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,7 +46,7 @@ public class YouTubeWebhookController {
     private final RegistrationRepository registrationRepository;
     private final NotificationDestinationRepository notificationDestinationRepository;
     private final DiscordNotificationService discordNotificationService;
-    private final YouTubeService youTubeService;
+    private final YouTubeEventSubService youTubeEventSubService;
     private final StringRedisTemplate redisTemplate;
 
     @Value("${youtube.eventsub.secret}")
@@ -71,7 +71,7 @@ public class YouTubeWebhookController {
 
     /**
      * PubSubHubbubからの配信更新通知を受信するエンドポイント。
-     * 署名を検証したうえで、実際にライブ配信中かどうかをYouTubeServiceで再確認し、
+     * 署名を検証したうえで、実際にライブ配信中かどうかをYouTubeEventSubServiceで再確認し、
      * Redisで重複通知を防ぎながらDiscordへ通知を送る。
      *
      * @param signature Googleが計算した署名(HMAC-SHA1、X-Hub-Signatureヘッダー)
@@ -98,7 +98,7 @@ public class YouTubeWebhookController {
         String videoId = videoIdMatcher.group(1);
         String channelId = channelIdMatcher.group(1);
 
-        if (!youTubeService.isLive(videoId)) {
+        if (!youTubeEventSubService.isLive(videoId)) {
             return ResponseEntity.ok().build();
         }
 

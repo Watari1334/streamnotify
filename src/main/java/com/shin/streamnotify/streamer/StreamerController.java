@@ -7,7 +7,6 @@ import com.shin.streamnotify.twitch.TwitchEventSubService;
 import com.shin.streamnotify.user.CurrentUserResolver;
 import com.shin.streamnotify.user.User;
 import com.shin.streamnotify.youtube.YouTubeEventSubService;
-import com.shin.streamnotify.youtube.YouTubeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
@@ -33,7 +32,6 @@ public class StreamerController {
     private final RegistrationRepository registrationRepository;
     private final TwitchEventSubService twitchEventSubService;
     private final YouTubeEventSubService youTubeEventSubService;
-    private final YouTubeService youTubeService;
     private final RateLimitService rateLimitService;
 
     private static final long YOUTUBE_SEARCH_LIMIT_PER_DAY = 20;
@@ -140,7 +138,7 @@ public class StreamerController {
      * @throws SearchLimitExceededException 1日の検索回数上限を超えた場合
      */
     @GetMapping("/streamers/search/youtube")
-    public List<YouTubeService.ChannelSearchResult> searchYouTubeStreamers(
+    public List<YouTubeEventSubService.ChannelSearchResult> searchYouTubeStreamers(
             @AuthenticationPrincipal OidcUser oidcUser,
             @RequestParam String query
     ) {
@@ -152,7 +150,7 @@ public class StreamerController {
             throw new SearchLimitExceededException("YouTube検索の1日の上限(20回)に達しました。24時間後に再度お試しください");
         }
 
-        return youTubeService.searchChannels(query);
+        return youTubeEventSubService.searchChannels(query);
     }
 
     /**

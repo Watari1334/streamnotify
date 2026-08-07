@@ -8,7 +8,7 @@ import com.shin.streamnotify.registration.RegistrationRepository;
 import com.shin.streamnotify.streamer.Streamer;
 import com.shin.streamnotify.streamer.StreamerRepository;
 import com.shin.streamnotify.user.User;
-import com.shin.streamnotify.youtube.YouTubeService;
+import com.shin.streamnotify.youtube.YouTubeEventSubService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +40,7 @@ class YouTubeWebhookControllerTest {
     @Mock private RegistrationRepository registrationRepository;
     @Mock private NotificationDestinationRepository notificationDestinationRepository;
     @Mock private DiscordNotificationService discordNotificationService;
-    @Mock private YouTubeService youTubeService;
+    @Mock private YouTubeEventSubService youTubeEventSubService;
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
 
@@ -55,9 +55,6 @@ class YouTubeWebhookControllerTest {
                 .thenReturn(true);
     }
 
-    /**
-     * テスト対象のコントローラと同じアルゴリズムで、テスト用の正しい署名を作る。
-     */
     private String sign(String body) throws Exception {
         Mac mac = Mac.getInstance("HmacSHA1");
         SecretKeySpec keySpec = new SecretKeySpec(TEST_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA1");
@@ -68,17 +65,14 @@ class YouTubeWebhookControllerTest {
 
     @Test
     void 検証リクエストにはchallengeをそのまま返す() {
-        // Act
         ResponseEntity<String> result = youTubeWebhookController.verify("test-challenge-123");
 
-        // Assert
         assertThat(result.getBody()).isEqualTo("test-challenge-123");
         assertThat(result.getStatusCode().value()).isEqualTo(200);
     }
 
     @Test
     void 署名が不正な場合は403を返す() {
-        // Arrange
         String xmlBody = """
                 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
                   <entry>
@@ -88,18 +82,15 @@ class YouTubeWebhookControllerTest {
                 </feed>
                 """;
 
-        // Act
         ResponseEntity<Void> result =
                 youTubeWebhookController.handleNotification("sha1=invalid", xmlBody);
 
-        // Assert
         assertThat(result.getStatusCode().value()).isEqualTo(403);
         verify(streamerRepository, never()).findByPlatformAndPlatformChannelId(anyString(), anyString());
     }
 
     @Test
     void 署名ヘッダーが無い場合は403を返す() {
-        // Arrange
         String xmlBody = """
                 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
                   <entry>
@@ -109,17 +100,14 @@ class YouTubeWebhookControllerTest {
                 </feed>
                 """;
 
-        // Act
         ResponseEntity<Void> result =
                 youTubeWebhookController.handleNotification(null, xmlBody);
 
-        // Assert
         assertThat(result.getStatusCode().value()).isEqualTo(403);
     }
 
     @Test
     void 配信中でなければDiscord通知は送られない() throws Exception {
-        // Arrange
         String xmlBody = """
                 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
                   <entry>
@@ -129,18 +117,15 @@ class YouTubeWebhookControllerTest {
                 </feed>
                 """;
 
-        when(youTubeService.isLive("video123")).thenReturn(false);
+        when(youTubeEventSubService.isLive("video123")).thenReturn(false);
 
-        // Act
         youTubeWebhookController.handleNotification(sign(xmlBody), xmlBody);
 
-        // Assert
         verify(streamerRepository, never()).findByPlatformAndPlatformChannelId(anyString(), anyString());
     }
 
     @Test
     void 配信中ならDiscordに通知が送られる() throws Exception {
-        // Arrange
         String xmlBody = """
                 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
                   <entry>
@@ -160,7 +145,7 @@ class YouTubeWebhookControllerTest {
         NotificationDestination destination = mock(NotificationDestination.class);
         when(destination.getDiscordWebhookUrl()).thenReturn("https://discord.com/webhook/test");
 
-        when(youTubeService.isLive("video123")).thenReturn(true);
+        when(youTubeEventSubService.isLive("video123")).thenReturn(true);
         when(streamerRepository.findByPlatformAndPlatformChannelId("youtube", "channel456"))
                 .thenReturn(Optional.of(streamer));
         when(registrationRepository.findByStreamer_StreamerId(streamer.getStreamerId()))
@@ -168,10 +153,8 @@ class YouTubeWebhookControllerTest {
         when(notificationDestinationRepository.findByUser_UserId(1L))
                 .thenReturn(Optional.of(destination));
 
-        // Act
         youTubeWebhookController.handleNotification(sign(xmlBody), xmlBody);
 
-        // Assert
         verify(discordNotificationService).sendStreamOnlineNotification(
                 "https://discord.com/webhook/test",
                 "youtube",
@@ -183,7 +166,6 @@ class YouTubeWebhookControllerTest {
 
     @Test
     void 登録されていないチャンネルの配信は通知されない() throws Exception {
-        // Arrange
         String xmlBody = """
                 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
                   <entry>
@@ -193,14 +175,12 @@ class YouTubeWebhookControllerTest {
                 </feed>
                 """;
 
-        when(youTubeService.isLive("video123")).thenReturn(true);
+        when(youTubeEventSubService.isLive("video123")).thenReturn(true);
         when(streamerRepository.findByPlatformAndPlatformChannelId("youtube", "unknown-channel"))
                 .thenReturn(Optional.empty());
 
-        // Act
         youTubeWebhookController.handleNotification(sign(xmlBody), xmlBody);
 
-        // Assert
         verify(discordNotificationService, never()).sendStreamOnlineNotification(anyString(), anyString(), anyString(), anyString(), anyString());
     }
 }
