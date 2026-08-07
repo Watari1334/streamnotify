@@ -1,6 +1,7 @@
 package com.shin.streamnotify.twitch;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,10 @@ import org.springframework.cache.annotation.Cacheable;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * TwitchのEventSub(配信検知)とチャンネル検索を扱うサービス。
+ */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TwitchEventSubService {
@@ -26,6 +31,13 @@ public class TwitchEventSubService {
     @Value("${twitch.eventsub.callback-url}")
     private String callbackUrl;
 
+    /**
+     * 指定した配信者のstream.onlineイベント(配信開始)を購読する。
+     * TwitchEventSubのWebhook方式で登録し、購読成功時にIDが発行される。
+     *
+     * @param broadcasterUserId 購読対象のTwitchチャンネルID
+     * @return 発行された購読ID(後で解除する際に使用する)
+     */
     public String subscribeToStreamOnline(String broadcasterUserId) {
         String appAccessToken = twitchAuthService.getAppAccessToken();
 
@@ -49,11 +61,16 @@ public class TwitchEventSubService {
                 .retrieve()
                 .body(SubscriptionResponse.class);
 
-        System.out.println("EventSub購読登録結果: " + response);
+        log.info("EventSub購読登録結果: {}", response);
 
         return response.data().get(0).id();
     }
 
+    /**
+     * 指定した購読IDのEventSub購読を解除する。
+     *
+     * @param subscriptionId 解除する購読ID
+     */
     public void unsubscribe(String subscriptionId) {
         String appAccessToken = twitchAuthService.getAppAccessToken();
 
@@ -65,6 +82,11 @@ public class TwitchEventSubService {
                 .toBodilessEntity();
     }
 
+    /**
+     * 現在登録されているEventSub購読の一覧を、Twitch APIのレスポンスをそのまま文字列で返す。
+     *
+     * @return Twitch APIから返される購読一覧のJSON文字列
+     */
     public String listSubscriptions() {
         String appAccessToken = twitchAuthService.getAppAccessToken();
 
@@ -82,6 +104,13 @@ public class TwitchEventSubService {
     private record SubscriptionData(String id) {
     }
 
+    /**
+     * Twitchのチャンネルをキーワードで検索する。
+     * 結果はRedisに5分間キャッシュされる(twitchchannelSearch)。
+     *
+     * @param query 検索キーワード
+     * @return 検索結果一覧
+     */
     @Cacheable(value = "twitchchannelSearch", key = "#query")
     public List<ChannelSearchResult> searchChannels(String query) {
         String appAccessToken = twitchAuthService.getAppAccessToken();
@@ -99,6 +128,14 @@ public class TwitchEventSubService {
     private record SearchResponse(List<ChannelSearchResult> data) {
     }
 
+    /**
+     * Twitchチャンネル検索結果のDTO。
+     *
+     * @param id Twitchのブロードキャスター(チャンネル)ID
+     * @param broadcaster_login チャンネルのログイン名(URLスラッグ)
+     * @param display_name チャンネルの表示名
+     * @param thumbnail_url サムネイル画像のURL
+     */
     public record ChannelSearchResult(
             String id,
             String broadcaster_login,

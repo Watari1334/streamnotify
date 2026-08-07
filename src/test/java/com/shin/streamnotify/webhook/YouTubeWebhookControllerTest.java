@@ -18,8 +18,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +33,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class YouTubeWebhookControllerTest {
+
+    private static final String TEST_SECRET = "test-secret";
 
     @Mock private StreamerRepository streamerRepository;
     @Mock private RegistrationRepository registrationRepository;
@@ -42,9 +49,21 @@ class YouTubeWebhookControllerTest {
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(youTubeWebhookController, "eventSubSecret", TEST_SECRET);
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         lenient().when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(true);
+    }
+
+    /**
+     * テスト対象のコントローラと同じアルゴリズムで、テスト用の正しい署名を作る。
+     */
+    private String sign(String body) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA1");
+        SecretKeySpec keySpec = new SecretKeySpec(TEST_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA1");
+        mac.init(keySpec);
+        byte[] hash = mac.doFinal(body.getBytes(StandardCharsets.UTF_8));
+        return "sha1=" + HexFormat.of().formatHex(hash);
     }
 
     @Test
@@ -58,7 +77,48 @@ class YouTubeWebhookControllerTest {
     }
 
     @Test
-    void 配信中でなければDiscord通知は送られない() {
+    void 署名が不正な場合は403を返す() {
+        // Arrange
+        String xmlBody = """
+                <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
+                  <entry>
+                    <yt:videoId>video123</yt:videoId>
+                    <yt:channelId>channel456</yt:channelId>
+                  </entry>
+                </feed>
+                """;
+
+        // Act
+        ResponseEntity<Void> result =
+                youTubeWebhookController.handleNotification("sha1=invalid", xmlBody);
+
+        // Assert
+        assertThat(result.getStatusCode().value()).isEqualTo(403);
+        verify(streamerRepository, never()).findByPlatformAndPlatformChannelId(anyString(), anyString());
+    }
+
+    @Test
+    void 署名ヘッダーが無い場合は403を返す() {
+        // Arrange
+        String xmlBody = """
+                <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
+                  <entry>
+                    <yt:videoId>video123</yt:videoId>
+                    <yt:channelId>channel456</yt:channelId>
+                  </entry>
+                </feed>
+                """;
+
+        // Act
+        ResponseEntity<Void> result =
+                youTubeWebhookController.handleNotification(null, xmlBody);
+
+        // Assert
+        assertThat(result.getStatusCode().value()).isEqualTo(403);
+    }
+
+    @Test
+    void 配信中でなければDiscord通知は送られない() throws Exception {
         // Arrange
         String xmlBody = """
                 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
@@ -72,14 +132,14 @@ class YouTubeWebhookControllerTest {
         when(youTubeService.isLive("video123")).thenReturn(false);
 
         // Act
-        youTubeWebhookController.handleNotification(xmlBody);
+        youTubeWebhookController.handleNotification(sign(xmlBody), xmlBody);
 
         // Assert
         verify(streamerRepository, never()).findByPlatformAndPlatformChannelId(anyString(), anyString());
     }
 
     @Test
-    void 配信中ならDiscordに通知が送られる() {
+    void 配信中ならDiscordに通知が送られる() throws Exception {
         // Arrange
         String xmlBody = """
                 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
@@ -109,7 +169,7 @@ class YouTubeWebhookControllerTest {
                 .thenReturn(Optional.of(destination));
 
         // Act
-        youTubeWebhookController.handleNotification(xmlBody);
+        youTubeWebhookController.handleNotification(sign(xmlBody), xmlBody);
 
         // Assert
         verify(discordNotificationService).sendStreamOnlineNotification(
@@ -122,7 +182,7 @@ class YouTubeWebhookControllerTest {
     }
 
     @Test
-    void 登録されていないチャンネルの配信は通知されない() {
+    void 登録されていないチャンネルの配信は通知されない() throws Exception {
         // Arrange
         String xmlBody = """
                 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015">
@@ -138,7 +198,7 @@ class YouTubeWebhookControllerTest {
                 .thenReturn(Optional.empty());
 
         // Act
-        youTubeWebhookController.handleNotification(xmlBody);
+        youTubeWebhookController.handleNotification(sign(xmlBody), xmlBody);
 
         // Assert
         verify(discordNotificationService, never()).sendStreamOnlineNotification(anyString(), anyString(), anyString(), anyString(), anyString());

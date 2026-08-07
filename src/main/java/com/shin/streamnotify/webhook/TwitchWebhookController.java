@@ -9,6 +9,7 @@ import com.shin.streamnotify.registration.RegistrationRepository;
 import com.shin.streamnotify.streamer.Streamer;
 import com.shin.streamnotify.streamer.StreamerRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +26,11 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * TwitchのEventSub Webhookを受信するコントローラ。
+ * 署名検証(HMAC-SHA256)によって、リクエストが正規のTwitchからのものかを確認する。
+ */
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 public class TwitchWebhookController {
@@ -39,6 +45,21 @@ public class TwitchWebhookController {
     private final NotificationDestinationRepository notificationDestinationRepository;
     private final DiscordNotificationService discordNotificationService;
 
+    /**
+     * TwitchのEventSub Webhookを受信するエンドポイント。
+     * messageTypeによって処理を出し分ける。
+     * - webhook_callback_verification: 購読登録時の検証チャレンジに応答する
+     * - notification: 実際の配信開始通知を処理する
+     * - revocation: Twitch側から購読が取り消されたことの通知
+     *
+     * @param messageId Twitchが発行するメッセージID(署名計算に使用)
+     * @param timestamp メッセージのタイムスタンプ(署名計算に使用)
+     * @param signature Twitchが計算した署名(HMAC-SHA256)
+     * @param messageType メッセージの種類
+     * @param body リクエストボディ(JSON文字列)
+     * @return Twitchへのレスポンス。署名不一致の場合は403
+     * @throws Exception JSONのパースに失敗した場合
+     */
     @PostMapping("/webhooks/twitch")
     public ResponseEntity<String> handleTwitchWebhook(
             @RequestHeader("Twitch-Eventsub-Message-Id") String messageId,
@@ -64,13 +85,20 @@ public class TwitchWebhookController {
         }
 
         if ("revocation".equals(messageType)) {
-            System.out.println("購読が取り消されました: " + body);
+            log.warn("購読が取り消されました: {}", body);
             return ResponseEntity.ok("");
         }
 
         return ResponseEntity.ok("");
     }
 
+    /**
+     * 配信開始通知(notification)を処理する。
+     * 通知対象のStreamerを特定し、登録している全ユーザーのDiscord Webhookへ通知を送る。
+     *
+     * @param body リクエストボディ(JSON文字列)
+     * @throws Exception JSONのパースに失敗した場合
+     */
     private void handleStreamOnlineNotification(String body) throws Exception {
         TwitchEventSubNotification notification =
                 objectMapper.readValue(body, TwitchEventSubNotification.class);
@@ -81,7 +109,7 @@ public class TwitchWebhookController {
                 .findByPlatformAndPlatformChannelId("twitch", broadcasterUserId);
 
         if (streamerOpt.isEmpty()) {
-            System.out.println("該当するStreamerが見つかりません: " + broadcasterUserId);
+            log.warn("該当するStreamerが見つかりません: {}", broadcasterUserId);
             return;
         }
 
@@ -107,6 +135,16 @@ public class TwitchWebhookController {
         }
     }
 
+    /**
+     * Twitchから送られた署名(Twitch-Eventsub-Message-Signature)と比較するための
+     * 期待値をHMAC-SHA256で計算する。
+     * messageId + timestamp + bodyを、EventSub登録時に渡した秘密鍵で署名する。
+     *
+     * @param messageId Twitchが発行するメッセージID
+     * @param timestamp メッセージのタイムスタンプ
+     * @param body リクエストボディ
+     * @return "sha256="で始まる16進数の署名文字列
+     */
     private String computeSignature(String messageId, String timestamp, String body) {
         try {
             String message = messageId + timestamp + body;
