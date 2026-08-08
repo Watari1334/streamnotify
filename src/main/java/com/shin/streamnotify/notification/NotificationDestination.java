@@ -8,6 +8,12 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+/**
+ * ユーザーごとの通知先を表すエンティティ。
+ * 現状はDiscord Webhookのみに対応するが、notificationTypeフィールドで
+ * 将来的に他の通知先(Slack等)への拡張を見込んだ設計になっている。
+ * 1ユーザーにつき1件のみ登録できる想定。
+ */
 @Entity
 @Table(name = "notification_destinations")
 @Getter
@@ -33,6 +39,13 @@ public class NotificationDestination {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    /**
+     * Discord通知先を新規作成する。
+     * notificationTypeは常に"DISCORD"で固定される。
+     *
+     * @param user 通知先の持ち主となるユーザー
+     * @param discordWebhookUrl 通知を送るDiscord Webhook URL
+     */
     public NotificationDestination(User user, String discordWebhookUrl) {
         this.user = user;
         this.notificationType = "DISCORD";
